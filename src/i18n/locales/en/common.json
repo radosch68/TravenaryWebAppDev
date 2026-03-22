@@ -1,0 +1,10 @@
+{
+  "submit": "Submit",
+  "cancel": "Cancel",
+  "save": "Save",
+  "back": "Back",
+  "loading": "Loading...",
+  "pending": "Please wait...",
+  "homePlaceholder": "Your itinerary dashboard is ready. Start by creating your first trip.",
+  "createItinerary": "Create itinerary"
+}

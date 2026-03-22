@@ -1,0 +1,10 @@
+{
+  "submit": "Odeslat",
+  "cancel": "Zrušit",
+  "save": "Uložit",
+  "back": "Zpět",
+  "loading": "Načítání...",
+  "pending": "Počkejte prosím...",
+  "homePlaceholder": "Váš panel itinerářů je připraven. Začněte vytvořením první cesty.",
+  "createItinerary": "Vytvořit itinerář"
+}

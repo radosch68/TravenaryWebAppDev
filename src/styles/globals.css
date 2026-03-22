@@ -1,0 +1,143 @@
+:root {
+  --bg-main: radial-gradient(circle at 10% 20%, #fff1d6 0%, #ffe0b3 30%, #f8c38f 100%);
+  --surface: rgba(255, 255, 255, 0.9);
+  --surface-border: rgba(127, 85, 29, 0.18);
+  --text-main: #2f2416;
+  --text-muted: #6f5a41;
+  --accent: #0d7c66;
+  --accent-strong: #0a5d4d;
+  --danger: #b43232;
+  --radius: 16px;
+  --space-1: 0.5rem;
+  --space-2: 0.75rem;
+  --space-3: 1rem;
+  --space-4: 1.5rem;
+  --space-5: 2rem;
+  --shadow: 0 14px 36px rgba(58, 36, 9, 0.18);
+  font-family: 'Avenir Next', 'Segoe UI', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg-main);
+  color: var(--text-main);
+}
+
+a {
+  color: var(--accent-strong);
+  text-decoration: none;
+}
+
+.auth-shell,
+.app-shell {
+  min-height: 100vh;
+  padding: var(--space-4);
+}
+
+.auth-card,
+.panel,
+.home-panel {
+  width: min(100%, 560px);
+  margin: 0 auto;
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  background: var(--surface);
+  padding: var(--space-5);
+}
+
+.form {
+  display: grid;
+  gap: var(--space-2);
+}
+
+input,
+select,
+button {
+  font: inherit;
+}
+
+input,
+select {
+  border: 1px solid var(--surface-border);
+  border-radius: 12px;
+  padding: 0.7rem 0.8rem;
+}
+
+button {
+  border: none;
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.error {
+  color: var(--danger);
+}
+
+.social-row,
+.button-row {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.inline-field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.topbar {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.topbar__nav,
+.topbar__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.profile-grid {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.panel.danger {
+  border-color: rgba(180, 50, 50, 0.5);
+}
+
+@media (min-width: 768px) {
+  .profile-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+
+  .topbar {
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+  }
+
+  .auth-card,
+  .home-panel {
+    width: min(100%, 640px);
+  }
+}

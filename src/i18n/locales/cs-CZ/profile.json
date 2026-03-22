@@ -1,0 +1,52 @@
+{
+  "title": "Profil",
+  "sections": {
+    "preferences": "Nastavení",
+    "displayName": "Zobrazované jméno",
+    "password": "Heslo",
+    "danger": "Nebezpečná zóna"
+  },
+  "fields": {
+    "language": "Jazyk",
+    "email": "E-mail",
+    "displayName": "Zobrazované jméno",
+    "providers": "Propojení poskytovatelé",
+    "createdAt": "Vytvořeno",
+    "updatedAt": "Naposledy aktualizováno",
+    "notAvailable": "Není k dispozici",
+    "currentPassword": "Současné heslo",
+    "newPassword": "Nové heslo",
+    "password": "Heslo"
+  },
+  "providers": {
+    "password": "Heslo",
+    "google": "Google",
+    "apple": "Apple"
+  },
+  "languages": {
+    "en": "Angličtina",
+    "cs": "Čeština"
+  },
+  "actions": {
+    "saveDisplayName": "Uložit jméno",
+    "savePassword": "Změnit heslo",
+    "startDelete": "Smazat účet",
+    "confirmDelete": "Potvrdit smazání",
+    "cancelDelete": "Zrušit"
+  },
+  "messages": {
+    "saved": "Profil byl aktualizován.",
+    "passwordSaved": "Heslo bylo úspěšně změněno.",
+    "passwordError": "Současné heslo je nesprávné.",
+    "deleteError": "Účet se nepodařilo smazat. Zkontrolujte heslo a zkuste to znovu.",
+    "displayNameRequired": "Zobrazované jméno je povinné.",
+    "displayNameMax": "Zobrazované jméno může mít maximálně 80 znaků.",
+    "passwordRequired": "Heslo je povinné."
+  },
+  "validation": {
+    "displayNameRequired": "Zobrazované jméno je povinné.",
+    "displayNameMax": "Zobrazované jméno může mít maximálně 80 znaků.",
+    "passwordMin": "Heslo musí mít alespoň 8 znaků.",
+    "passwordRequired": "Heslo je povinné."
+  }
+}

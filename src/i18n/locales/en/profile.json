@@ -1,0 +1,52 @@
+{
+  "title": "Profile",
+  "sections": {
+    "preferences": "Preferences",
+    "displayName": "Display name",
+    "password": "Password",
+    "danger": "Danger zone"
+  },
+  "fields": {
+    "language": "Language",
+    "email": "Email",
+    "displayName": "Display name",
+    "providers": "Linked providers",
+    "createdAt": "Created",
+    "updatedAt": "Last updated",
+    "notAvailable": "Not available",
+    "currentPassword": "Current password",
+    "newPassword": "New password",
+    "password": "Password"
+  },
+  "providers": {
+    "password": "Password",
+    "google": "Google",
+    "apple": "Apple"
+  },
+  "languages": {
+    "en": "English",
+    "cs": "Czech"
+  },
+  "actions": {
+    "saveDisplayName": "Save display name",
+    "savePassword": "Change password",
+    "startDelete": "Delete account",
+    "confirmDelete": "Confirm deletion",
+    "cancelDelete": "Cancel"
+  },
+  "messages": {
+    "saved": "Profile updated.",
+    "passwordSaved": "Password changed successfully.",
+    "passwordError": "Current password is incorrect.",
+    "deleteError": "Unable to delete account. Check password and try again.",
+    "displayNameRequired": "Display name is required.",
+    "displayNameMax": "Display name must be at most 80 characters.",
+    "passwordRequired": "Password is required."
+  },
+  "validation": {
+    "displayNameRequired": "Display name is required.",
+    "displayNameMax": "Display name must be at most 80 characters.",
+    "passwordMin": "Password must be at least 8 characters.",
+    "passwordRequired": "Password is required."
+  }
+}

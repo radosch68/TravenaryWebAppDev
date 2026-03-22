@@ -1,0 +1,76 @@
+import { apiRequest } from '@/services/api-client'
+import type { AuthTokens, UserProfile } from '@/services/contracts'
+import { tokenService } from '@/services/token-service'
+
+export interface SignUpRequest {
+  email: string
+  password: string
+  displayName?: string
+}
+
+export interface SignInRequest {
+  email: string
+  password: string
+}
+
+export async function signUp(payload: SignUpRequest): Promise<AuthTokens> {
+  const response = await apiRequest<AuthTokens & UserProfile>('/auth/signup', {
+    method: 'POST',
+    body: payload,
+  })
+
+  return {
+    accessToken: response.accessToken,
+    refreshToken: response.refreshToken,
+    expiresIn: response.expiresIn,
+  }
+}
+
+export async function signIn(payload: SignInRequest): Promise<AuthTokens> {
+  return apiRequest<AuthTokens>('/auth/signin', {
+    method: 'POST',
+    body: payload,
+  })
+}
+
+export async function signOut(): Promise<void> {
+  const refreshToken = tokenService.getRefreshToken()
+  if (!refreshToken) {
+    return
+  }
+
+  await apiRequest<void>('/auth/revoke', {
+    method: 'POST',
+    body: { refreshToken },
+  })
+}
+
+export async function refreshTokens(): Promise<AuthTokens> {
+  return apiRequest<AuthTokens>('/auth/refresh', {
+    method: 'POST',
+    body: {
+      refreshToken: tokenService.getRefreshToken(),
+    },
+  })
+}
+
+export async function socialSignIn(
+  provider: 'google' | 'apple',
+  idToken: string,
+): Promise<AuthTokens> {
+  return apiRequest<AuthTokens>(`/auth/oauth/${provider}`, {
+    method: 'POST',
+    body: { idToken },
+  })
+}
+
+export async function linkSocialProvider(
+  provider: 'google' | 'apple',
+  idToken: string,
+): Promise<void> {
+  await apiRequest<void>(`/auth/oauth/${provider}/link`, {
+    method: 'POST',
+    protected: true,
+    body: { idToken },
+  })
+}

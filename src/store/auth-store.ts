@@ -1,0 +1,124 @@
+import { create } from 'zustand'
+
+import {
+  configureApiClientAuthHandlers,
+  refreshSessionTokens,
+} from '@/services/api-client'
+import type { AuthTokens } from '@/services/contracts'
+import { getMe } from '../services/profile-service'
+import { tokenService } from '@/services/token-service'
+import { useProfileStore } from '@/store/profile-store'
+
+export interface AuthProviderIdentity {
+  provider: 'google' | 'apple'
+  idToken: string
+  linkStatus: 'collision_blocked' | 'linked'
+}
+
+interface AuthState {
+  accessToken: string | null
+  refreshToken: string | null
+  expiresInSeconds: number | null
+  issuedAtEpochMs: number | null
+  refreshState: 'idle' | 'refreshing' | 'failed'
+  identityCollision: AuthProviderIdentity | null
+  restorationChecked: boolean
+  setIdentityCollision: (payload: AuthProviderIdentity) => void
+  clearIdentityCollision: () => void
+  setSessionFromTokens: (tokens: AuthTokens) => void
+  bootstrapAuthenticatedSession: (tokens: AuthTokens) => Promise<void>
+  restoreSessionFromStorage: () => Promise<void>
+  clearSession: () => void
+}
+
+function applyTokens(tokens: AuthTokens): Omit<AuthState, 'setIdentityCollision' | 'clearIdentityCollision' | 'setSessionFromTokens' | 'bootstrapAuthenticatedSession' | 'restoreSessionFromStorage' | 'clearSession'> {
+  return {
+    accessToken: tokens.accessToken,
+    refreshToken: tokens.refreshToken,
+    expiresInSeconds: tokens.expiresIn,
+    issuedAtEpochMs: Date.now(),
+    refreshState: 'idle',
+    identityCollision: null,
+    restorationChecked: true,
+  }
+}
+
+export const useAuthStore = create<AuthState>((set, get) => ({
+  accessToken: null,
+  refreshToken: null,
+  expiresInSeconds: null,
+  issuedAtEpochMs: null,
+  refreshState: 'idle',
+  identityCollision: null,
+  restorationChecked: false,
+
+  setIdentityCollision: (identityCollision) => {
+    set({ identityCollision })
+  },
+
+  clearIdentityCollision: () => {
+    set({ identityCollision: null })
+  },
+
+  setSessionFromTokens: (tokens) => {
+    tokenService.setRefreshToken(tokens.refreshToken)
+    tokenService.scheduleProactiveRefresh(tokens.expiresIn, () => {
+      get().clearSession()
+      window.location.assign('/signin')
+    })
+    set(applyTokens(tokens))
+  },
+
+  bootstrapAuthenticatedSession: async (tokens) => {
+    get().setSessionFromTokens(tokens)
+    const profile = await getMe()
+    useProfileStore.getState().setProfile(profile)
+  },
+
+  restoreSessionFromStorage: async () => {
+    const savedRefreshToken = tokenService.getRefreshToken()
+    if (!savedRefreshToken) {
+      set({ restorationChecked: true })
+      return
+    }
+
+    set({ refreshState: 'refreshing' })
+    try {
+      const tokens = await refreshSessionTokens()
+      const profile = await getMe()
+      useProfileStore.getState().setProfile(profile)
+      get().setSessionFromTokens(tokens)
+    } catch {
+      get().clearSession()
+    } finally {
+      set({ restorationChecked: true, refreshState: 'idle' })
+    }
+  },
+
+  clearSession: () => {
+    tokenService.cancelProactiveRefresh()
+    tokenService.clearRefreshToken()
+    useProfileStore.getState().clearProfile()
+
+    set({
+      accessToken: null,
+      refreshToken: null,
+      expiresInSeconds: null,
+      issuedAtEpochMs: null,
+      refreshState: 'failed',
+      identityCollision: null,
+      restorationChecked: true,
+    })
+  },
+}))
+
+configureApiClientAuthHandlers({
+  getAccessToken: () => useAuthStore.getState().accessToken,
+  getRefreshToken: () => tokenService.getRefreshToken(),
+  onRefreshSuccess: (tokens) => {
+    useAuthStore.getState().setSessionFromTokens(tokens)
+  },
+  onRefreshFailure: () => {
+    useAuthStore.getState().clearSession()
+  },
+})
