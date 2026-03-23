@@ -22,7 +22,7 @@ export default function App(): ReactElement {
   }, [restoreSessionFromStorage])
 
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={import.meta.env.BASE_URL}>
       <Routes>
         <Route
           path="/signin"
