@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 
+import { BrandBanner } from '@/components/BrandBanner'
 import { signOut } from '@/services/auth-service'
 import { useAuthStore } from '@/store/auth-store'
 import { useProfileStore } from '@/store/profile-store'
@@ -35,7 +36,9 @@ export function Header(): ReactElement {
 
   return (
     <header className="topbar">
-      <div className="topbar__brand">Travenary</div>
+      <div className="topbar__brand">
+        <BrandBanner />
+      </div>
       <nav className="topbar__nav">
         <Link to="/">{t('common:back')}</Link>
         <Link to="/profile">{t('profile:title')}</Link>

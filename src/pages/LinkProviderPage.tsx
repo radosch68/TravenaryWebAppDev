@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 
+import { BrandBanner } from '@/components/BrandBanner'
 import { type SignInFormData, signInSchema } from '@/features/auth/schemas'
 import { linkSocialProvider, signIn } from '@/services/auth-service'
 import { ApiError } from '@/services/contracts'
@@ -68,6 +69,7 @@ export function LinkProviderPage(): ReactElement {
 
   return (
     <main className="auth-shell">
+      <BrandBanner />
       <section className="auth-card">
         <h1>{t('link.title')}</h1>
         <p>{t('link.subtitle', { provider: providerLabel })}</p>

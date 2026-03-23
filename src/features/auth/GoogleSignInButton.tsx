@@ -49,5 +49,5 @@ export function GoogleSignInButton({ onIdToken }: GoogleSignInButtonProps): Reac
     return <p className="error">{t('providerUnavailable')}</p>
   }
 
-  return <div aria-busy={isSubmitting} ref={buttonContainerRef} />
+  return <div aria-busy={isSubmitting} ref={buttonContainerRef} style={{ width: '100%' }} />
 }

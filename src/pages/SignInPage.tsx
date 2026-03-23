@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form'
 import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 
+import { BrandBanner } from '@/components/BrandBanner'
 import { acquireAppleIdToken } from '@/features/auth/apple-auth'
 import { GoogleSignInButton } from '@/features/auth/GoogleSignInButton'
 import { completeSocialAuth, handleSocialAuth } from '@/features/auth/social-auth-handlers'
@@ -60,27 +61,10 @@ export function SignInPage(): ReactElement {
 
   return (
     <main className="auth-shell">
+      <BrandBanner />
       <section className="auth-card">
         <h1>{t('auth:signIn.title')}</h1>
         <p>{t('auth:signIn.subtitle')}</p>
-
-        <form className="form" onSubmit={(event) => void onSubmit(event)}>
-          <label htmlFor="email">{t('auth:fields.email')}</label>
-          <input id="email" type="email" {...form.register('email')} />
-          <p>{form.formState.errors.email?.message ? t(`auth:${form.formState.errors.email.message}`) : ''}</p>
-
-          <label htmlFor="password">{t('auth:fields.password')}</label>
-          <input id="password" type="password" {...form.register('password')} />
-          <p>{form.formState.errors.password?.message ? t(`auth:${form.formState.errors.password.message}`) : ''}</p>
-
-          {apiError && <p className="error">{apiError}</p>}
-
-          <button type="submit" disabled={form.formState.isSubmitting}>
-            {form.formState.isSubmitting
-              ? t('auth:actions.signingIn')
-              : t('auth:actions.signIn')}
-          </button>
-        </form>
 
         {googleEnabled || appleEnabled ? (
           <div className="social-row">
@@ -96,6 +80,30 @@ export function SignInPage(): ReactElement {
         ) : (
           <p>{t('auth:social.disabled')}</p>
         )}
+
+        <p className="auth-divider">{t('auth:signIn.useEmail')}</p>
+
+        <form className="form" onSubmit={(event) => void onSubmit(event)}>
+          <label htmlFor="email">{t('auth:fields.email')}</label>
+          <input id="email" type="email" {...form.register('email')} />
+          {form.formState.errors.email?.message && (
+            <p className="error">{t(`auth:${form.formState.errors.email.message}`)}</p>
+          )}
+
+          <label htmlFor="password">{t('auth:fields.password')}</label>
+          <input id="password" type="password" {...form.register('password')} />
+          {form.formState.errors.password?.message && (
+            <p className="error">{t(`auth:${form.formState.errors.password.message}`)}</p>
+          )}
+
+          {apiError && <p className="error">{apiError}</p>}
+
+          <button type="submit" disabled={form.formState.isSubmitting}>
+            {form.formState.isSubmitting
+              ? t('auth:actions.signingIn')
+              : t('auth:actions.signIn')}
+          </button>
+        </form>
 
         <p>
           {t('auth:signIn.noAccount')} <Link to="/signup">{t('auth:actions.createAccount')}</Link>

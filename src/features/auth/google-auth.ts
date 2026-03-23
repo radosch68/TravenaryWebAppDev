@@ -13,12 +13,10 @@ export function renderGoogleSignInButton(
 
   let disposed = false
 
-  const render = (): boolean => {
-    if (disposed || !window.google?.accounts?.id?.renderButton) {
-      return false
-    }
+  type GoogleAccountsId = NonNullable<typeof window.google>['accounts']['id']
 
-    window.google.accounts.id.initialize({
+  const doRender = (width: number, googleAccountsId: GoogleAccountsId): void => {
+    googleAccountsId.initialize({
       client_id: clientId,
       callback: (response) => {
         if (!response.credential) {
@@ -31,20 +29,46 @@ export function renderGoogleSignInButton(
     })
 
     element.innerHTML = ''
-    window.google.accounts.id.renderButton(element, {
+    googleAccountsId.renderButton(element, {
       theme: 'outline',
       size: 'large',
       shape: 'pill',
       text: 'continue_with',
-      width: Math.max(element.clientWidth, 280),
+      width,
     })
+  }
 
+  // Re-render whenever the container changes size so the button fills the full
+  // width. This fixes Safari, where clientWidth may be 0 on the first
+  // synchronous pass before the browser has completed layout.
+  const observer = new ResizeObserver((entries) => {
+    if (disposed) return
+    const w = Math.round(entries[0]?.contentRect.width ?? 0)
+    const googleAccountsId = window.google?.accounts?.id
+    if (w > 0 && googleAccountsId?.renderButton) {
+      doRender(w, googleAccountsId)
+    }
+  })
+  observer.observe(element)
+
+  const render = (): boolean => {
+    const googleAccountsId = window.google?.accounts?.id
+    if (disposed || !googleAccountsId?.renderButton) {
+      return false
+    }
+    const width = element.clientWidth
+    if (width > 0) {
+      doRender(width, googleAccountsId)
+    }
+    // Return true even when width is 0 – SDK is ready; the ResizeObserver will
+    // fire once the element is laid out and call doRender with the real width.
     return true
   }
 
   if (render()) {
     return () => {
       disposed = true
+      observer.disconnect()
     }
   }
 
@@ -64,6 +88,7 @@ export function renderGoogleSignInButton(
 
   return () => {
     disposed = true
+    observer.disconnect()
     window.clearInterval(intervalId)
     window.clearTimeout(timeoutId)
   }

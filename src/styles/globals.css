@@ -39,6 +39,37 @@ a {
   padding: var(--space-4);
 }
 
+.auth-shell {
+  display: grid;
+  gap: var(--space-3);
+  align-content: start;
+}
+
+.brand-banner {
+  width: min(100%, 640px);
+  margin: 0 auto;
+  border: 1px solid var(--surface-border);
+  border-radius: calc(var(--radius) - 2px);
+  background: linear-gradient(120deg, rgba(13, 124, 102, 0.12), rgba(255, 255, 255, 0.95));
+  box-shadow: 0 10px 22px rgba(58, 36, 9, 0.12);
+  padding: 0.8rem 1.1rem;
+}
+
+.brand-banner__text {
+  font-family: 'Avenir Next', 'Trebuchet MS', sans-serif;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+  font-size: clamp(1.15rem, 2.2vw, 1.5rem);
+  color: #0f5a4a;
+}
+
+.brand-banner--compact {
+  width: auto;
+  margin: 0;
+  padding: 0.35rem 0.6rem;
+  box-shadow: none;
+}
+
 .auth-card,
 .panel,
 .home-panel {
@@ -102,6 +133,23 @@ button:disabled {
   margin-top: var(--space-3);
 }
 
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-muted);
+  margin: var(--space-4) 0 var(--space-3);
+  text-align: center;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--surface-border);
+}
+
 .inline-field {
   display: flex;
   align-items: center;
@@ -111,9 +159,17 @@ button:disabled {
 
 .topbar {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--space-2);
+  gap: var(--space-3);
   margin-bottom: var(--space-4);
+}
+
+.topbar__brand {
+  width: 100%;
+}
+
+.topbar__brand .brand-banner {
+  width: min(100%, 640px);
+  margin: 0 auto;
 }
 
 .topbar__nav,
@@ -122,6 +178,10 @@ button:disabled {
   align-items: center;
   gap: var(--space-2);
   flex-wrap: wrap;
+}
+
+.topbar__actions {
+  justify-content: flex-start;
 }
 
 .profile-grid {
@@ -141,8 +201,24 @@ button:disabled {
   }
 
   .topbar {
-    grid-template-columns: auto 1fr auto;
-    align-items: center;
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      'brand brand'
+      'nav actions';
+    align-items: start;
+  }
+
+  .topbar__brand {
+    grid-area: brand;
+  }
+
+  .topbar__nav {
+    grid-area: nav;
+  }
+
+  .topbar__actions {
+    grid-area: actions;
+    justify-content: flex-end;
   }
 
   .auth-card,
