@@ -173,6 +173,18 @@ button:disabled {
   color: #24292f;
 }
 
+.google-signin-btn {
+  width: 100%;
+  min-height: 52px;
+  overflow: hidden;
+}
+
+.google-signin-btn > div,
+.google-signin-btn iframe {
+  transform: scale(1.3);
+  transform-origin: left top;
+}
+
 .auth-divider {
   display: flex;
   align-items: center;

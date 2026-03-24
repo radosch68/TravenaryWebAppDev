@@ -9,12 +9,13 @@ interface GoogleSignInButtonProps {
 }
 
 export function GoogleSignInButton({ onIdToken }: GoogleSignInButtonProps): ReactElement {
-  const { t } = useTranslation('errors')
+  const { t, i18n } = useTranslation('errors')
   const hasClientId = Boolean(import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID)
   const buttonContainerRef = useRef<HTMLDivElement | null>(null)
   const onIdTokenRef = useRef(onIdToken)
   const [loadError, setLoadError] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const sdkLocale = i18n.resolvedLanguage?.toLowerCase().startsWith('cs') ? 'cs' : 'en'
 
   useEffect(() => {
     onIdTokenRef.current = onIdToken
@@ -42,12 +43,13 @@ export function GoogleSignInButton({ onIdToken }: GoogleSignInButtonProps): Reac
       () => {
         setLoadError(true)
       },
+      sdkLocale,
     )
-  }, [hasClientId])
+  }, [hasClientId, sdkLocale])
 
   if (!hasClientId || loadError) {
     return <p className="error">{t('providerUnavailable')}</p>
   }
 
-  return <div aria-busy={isSubmitting} ref={buttonContainerRef} style={{ width: '100%' }} />
+  return <div aria-busy={isSubmitting} ref={buttonContainerRef} className="google-signin-btn" />
 }

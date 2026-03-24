@@ -26,6 +26,7 @@ interface Window {
           size?: 'large' | 'medium' | 'small'
           text?: 'signin_with' | 'signup_with' | 'continue_with' | 'signin'
           shape?: 'rectangular' | 'pill' | 'circle' | 'square'
+          locale?: string
           width?: number
         }) => void
         prompt: () => void
