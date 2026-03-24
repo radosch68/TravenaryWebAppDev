@@ -6,6 +6,7 @@ import { CollisionGuardRoute } from './guards/CollisionGuardRoute'
 import { ProtectedRoute } from './guards/ProtectedRoute'
 import { PublicOnlyRoute } from './guards/PublicOnlyRoute'
 import { HomePage } from '../pages/HomePage'
+import { GithubOAuthCallbackPage } from '../pages/GithubOAuthCallbackPage'
 import { LinkProviderPage } from '../pages/LinkProviderPage'
 import { ProfilePage } from '../pages/ProfilePage'
 import { SignInPage } from '../pages/SignInPage'
@@ -50,6 +51,7 @@ export default function App(): ReactElement {
             </PublicOnlyRoute>
           }
         />
+        <Route path="/oauth/github/callback" element={<GithubOAuthCallbackPage />} />
         <Route
           path="/"
           element={

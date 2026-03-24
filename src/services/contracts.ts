@@ -19,7 +19,7 @@ export interface UserProfile {
   id: string
   email: string
   displayName?: string
-  authProviders: Array<'password' | 'google' | 'apple'>
+  authProviders: Array<'password' | 'google' | 'apple' | 'github'>
   createdAt: string
   updatedAt: string
 }

@@ -21,7 +21,8 @@
   "providers": {
     "password": "Heslo",
     "google": "Google",
-    "apple": "Apple"
+    "apple": "Apple",
+    "github": "GitHub"
   },
   "languages": {
     "en": "Angličtina",

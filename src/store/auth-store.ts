@@ -10,8 +10,8 @@ import { tokenService } from '@/services/token-service'
 import { useProfileStore } from '@/store/profile-store'
 
 export interface AuthProviderIdentity {
-  provider: 'google' | 'apple'
-  idToken: string
+  provider: 'google' | 'apple' | 'github'
+  credential: string
   email?: string
   linkStatus: 'collision_blocked' | 'linked'
 }

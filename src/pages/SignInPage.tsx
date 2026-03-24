@@ -10,6 +10,7 @@ import { acquireAppleIdToken } from '@/features/auth/apple-auth'
 import { GoogleSignInButton } from '@/features/auth/GoogleSignInButton'
 import { completeSocialAuth, handleSocialAuth } from '@/features/auth/social-auth-handlers'
 import { type SignInFormData, signInSchema } from '@/features/auth/schemas'
+import { acquireGithubAuthCode } from '../features/auth/github-auth'
 import { signIn } from '@/services/auth-service'
 import { ApiError } from '@/services/contracts'
 import { useAuthStore } from '@/store/auth-store'
@@ -33,6 +34,7 @@ export function SignInPage(): ReactElement {
   const socialAuthEnabled = import.meta.env.VITE_ENABLE_SOCIAL_AUTH === 'true'
   const googleEnabled = socialAuthEnabled && Boolean(import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID)
   const appleEnabled = socialAuthEnabled && Boolean(import.meta.env.VITE_APPLE_OAUTH_CLIENT_ID)
+  const githubEnabled = socialAuthEnabled && Boolean(import.meta.env.VITE_GITHUB_OAUTH_CLIENT_ID)
 
   const onSubmit = form.handleSubmit(async (values) => {
     setApiError('')
@@ -59,6 +61,10 @@ export function SignInPage(): ReactElement {
     await completeSocialAuth('google', idToken, navigate, setApiError)
   }
 
+  const onGithub = async (): Promise<void> => {
+    await handleSocialAuth('github', acquireGithubAuthCode, navigate, setApiError)
+  }
+
   return (
     <main className="auth-shell">
       <BrandBanner />
@@ -66,10 +72,15 @@ export function SignInPage(): ReactElement {
         <h1>{t('auth:signIn.title')}</h1>
         <p>{t('auth:signIn.subtitle')}</p>
 
-        {googleEnabled || appleEnabled ? (
+        {googleEnabled || appleEnabled || githubEnabled ? (
           <div className="social-row">
             {googleEnabled ? (
               <GoogleSignInButton onIdToken={onGoogleIdToken} />
+            ) : null}
+            {githubEnabled ? (
+              <button type="button" onClick={() => void onGithub()}>
+                {t('auth:actions.continueGithub')}
+              </button>
             ) : null}
             {appleEnabled ? (
               <button type="button" onClick={() => void onApple()}>

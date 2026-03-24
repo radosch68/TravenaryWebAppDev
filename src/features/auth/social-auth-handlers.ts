@@ -5,8 +5,8 @@ import { ApiError } from '@/services/contracts'
 import { socialSignIn } from '@/services/auth-service'
 import { useAuthStore } from '@/store/auth-store'
 
-function extractEmailFromIdToken(idToken: string): string | undefined {
-  const [, payload] = idToken.split('.')
+function extractEmailFromJwtCredential(credential: string): string | undefined {
+  const [, payload] = credential.split('.')
   if (!payload) {
     return undefined
   }
@@ -22,21 +22,21 @@ function extractEmailFromIdToken(idToken: string): string | undefined {
 }
 
 export async function completeSocialAuth(
-  provider: 'google' | 'apple',
-  idToken: string,
+  provider: 'google' | 'apple' | 'github',
+  credential: string,
   navigate: NavigateFunction,
   setErrorMessage: (value: string) => void,
 ): Promise<void> {
   try {
-    const tokens = await socialSignIn(provider, idToken)
+    const tokens = await socialSignIn(provider, credential)
     await useAuthStore.getState().bootstrapAuthenticatedSession(tokens)
     navigate('/')
   } catch (error) {
     if (error instanceof ApiError && error.status === 409) {
       useAuthStore.getState().setIdentityCollision({
         provider,
-        idToken,
-        email: extractEmailFromIdToken(idToken),
+        credential,
+        email: provider === 'github' ? undefined : extractEmailFromJwtCredential(credential),
         linkStatus: 'collision_blocked',
       })
       navigate('/link-provider')
@@ -53,14 +53,14 @@ export async function completeSocialAuth(
 }
 
 export async function handleSocialAuth(
-  provider: 'google' | 'apple',
+  provider: 'google' | 'apple' | 'github',
   getToken: () => Promise<string>,
   navigate: NavigateFunction,
   setErrorMessage: (value: string) => void,
 ): Promise<void> {
   try {
-    const idToken = await getToken()
-    await completeSocialAuth(provider, idToken, navigate, setErrorMessage)
+    const credential = await getToken()
+    await completeSocialAuth(provider, credential, navigate, setErrorMessage)
   } catch {
     setErrorMessage(i18n.t('errors:providerUnavailable'))
   }

@@ -47,7 +47,7 @@ export function LinkProviderPage(): ReactElement {
     try {
       const tokens = await signIn(values)
       await bootstrapAuthenticatedSession(tokens)
-      await linkSocialProvider(collision.provider, collision.idToken)
+      await linkSocialProvider(collision.provider, collision.credential)
       clearIdentityCollision()
       navigate('/')
     } catch (error) {
@@ -65,7 +65,11 @@ export function LinkProviderPage(): ReactElement {
     navigate('/signin')
   }
 
-  const providerLabel = collision?.provider === 'apple' ? 'Apple' : 'Google'
+  const providerLabel = collision?.provider === 'apple'
+    ? 'Apple'
+    : collision?.provider === 'github'
+      ? 'GitHub'
+      : 'Google'
 
   return (
     <main className="auth-shell">

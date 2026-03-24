@@ -55,22 +55,22 @@ export async function refreshTokens(): Promise<AuthTokens> {
 }
 
 export async function socialSignIn(
-  provider: 'google' | 'apple',
-  idToken: string,
+  provider: 'google' | 'apple' | 'github',
+  credential: string,
 ): Promise<AuthTokens> {
   return apiRequest<AuthTokens>(`/auth/oauth/${provider}`, {
     method: 'POST',
-    body: { idToken },
+    body: provider === 'github' ? { code: credential } : { idToken: credential },
   })
 }
 
 export async function linkSocialProvider(
-  provider: 'google' | 'apple',
-  idToken: string,
+  provider: 'google' | 'apple' | 'github',
+  credential: string,
 ): Promise<void> {
   await apiRequest<void>(`/auth/oauth/${provider}/link`, {
     method: 'POST',
     protected: true,
-    body: { idToken },
+    body: provider === 'github' ? { code: credential } : { idToken: credential },
   })
 }

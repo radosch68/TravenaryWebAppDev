@@ -6,6 +6,7 @@ interface ImportMetaEnv {
   readonly VITE_ENABLE_SOCIAL_AUTH?: 'true' | 'false'
   readonly VITE_GOOGLE_OAUTH_CLIENT_ID?: string
   readonly VITE_APPLE_OAUTH_CLIENT_ID?: string
+  readonly VITE_GITHUB_OAUTH_CLIENT_ID?: string
 }
 
 interface ImportMeta {
