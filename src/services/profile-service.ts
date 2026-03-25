@@ -22,7 +22,6 @@ export async function changePassword(
   return apiRequest<UserProfile>('/users/me', {
     method: 'PATCH',
     protected: true,
-    skipAuthRefreshOn401: true,
     body: { currentPassword, newPassword },
   })
 }
@@ -31,7 +30,6 @@ export async function deleteAccount(password?: string): Promise<void> {
   await apiRequest<void>('/users/me', {
     method: 'DELETE',
     protected: true,
-    skipAuthRefreshOn401: true,
     body: password ? { password } : {},
   })
 }

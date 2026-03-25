@@ -194,8 +194,15 @@ export function ProfilePage(): ReactElement {
           <h2>{t('profile:sections.displayName')}</h2>
           <form className="form" onSubmit={(event) => void submitDisplayName(event)}>
             <label htmlFor="displayName">{t('profile:fields.displayName')}</label>
-            <input id="displayName" type="text" {...displayNameForm.register('displayName')} />
-            <button type="submit">{t('profile:actions.saveDisplayName')}</button>
+            <input
+              id="displayName"
+              type="text"
+              disabled={displayNameForm.formState.isSubmitting}
+              {...displayNameForm.register('displayName')}
+            />
+            <button type="submit" disabled={displayNameForm.formState.isSubmitting}>
+              {t('profile:actions.saveDisplayName')}
+            </button>
             {displayNameStatus && <p>{displayNameStatus}</p>}
           </form>
         </article>
@@ -205,20 +212,32 @@ export function ProfilePage(): ReactElement {
             <h2>{t('profile:sections.password')}</h2>
             <form className="form" onSubmit={(event) => void submitPassword(event)}>
               <label htmlFor="currentPassword">{t('profile:fields.currentPassword')}</label>
-              <input id="currentPassword" type="password" {...passwordForm.register('currentPassword')} />
+              <input
+                id="currentPassword"
+                type="password"
+                disabled={passwordForm.formState.isSubmitting}
+                {...passwordForm.register('currentPassword')}
+              />
               {passwordForm.formState.errors.currentPassword?.message ? (
                 <p className="error">
                   {t(`profile:${String(passwordForm.formState.errors.currentPassword.message)}`)}
                 </p>
               ) : null}
               <label htmlFor="newPassword">{t('profile:fields.newPassword')}</label>
-              <input id="newPassword" type="password" {...passwordForm.register('newPassword')} />
+              <input
+                id="newPassword"
+                type="password"
+                disabled={passwordForm.formState.isSubmitting}
+                {...passwordForm.register('newPassword')}
+              />
               {passwordForm.formState.errors.newPassword?.message ? (
                 <p className="error">
                   {t(`profile:${String(passwordForm.formState.errors.newPassword.message)}`)}
                 </p>
               ) : null}
-              <button type="submit">{t('profile:actions.savePassword')}</button>
+              <button type="submit" disabled={passwordForm.formState.isSubmitting}>
+                {t('profile:actions.savePassword')}
+              </button>
               {passwordStatus && <p>{passwordStatus}</p>}
             </form>
           </article>
@@ -243,7 +262,12 @@ export function ProfilePage(): ReactElement {
                       : t('profile:messages.deletePasswordRequired')}
                   </p>
                   <label htmlFor="deletePassword">{t('profile:fields.password')}</label>
-                  <input id="deletePassword" type="password" {...deleteForm.register('password')} />
+                  <input
+                    id="deletePassword"
+                    type="password"
+                    disabled={deleteForm.formState.isSubmitting}
+                    {...deleteForm.register('password')}
+                  />
                   {deleteForm.formState.errors.password?.message ? (
                     <p className="error">
                       {t(`profile:${String(deleteForm.formState.errors.password.message)}`)}
@@ -254,10 +278,18 @@ export function ProfilePage(): ReactElement {
                 <p>{t('profile:messages.deleteNoPassword')}</p>
               )}
               <div className="button-row">
-                <button className="button-danger" type="submit">
+                <button
+                  className="button-danger"
+                  type="submit"
+                  disabled={deleteForm.formState.isSubmitting}
+                >
                   {t('profile:actions.confirmDelete')}
                 </button>
-                <button type="button" onClick={() => setShowDeleteForm(false)}>
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteForm(false)}
+                  disabled={deleteForm.formState.isSubmitting}
+                >
                   {t('profile:actions.cancelDelete')}
                 </button>
               </div>

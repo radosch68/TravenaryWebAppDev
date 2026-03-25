@@ -91,7 +91,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch {
       get().clearSession()
     } finally {
-      set({ restorationChecked: true, refreshState: 'idle' })
+      set({ restorationChecked: true })
     }
   },
 

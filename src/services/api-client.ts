@@ -89,24 +89,43 @@ export async function refreshSessionTokens(): Promise<AuthTokens> {
   refreshInFlight = (async () => {
     const abortController = new AbortController()
     const timeoutId = setTimeout(() => abortController.abort(), DEFAULT_TIMEOUT_MS)
-    const response = await fetch(`${baseUrl()}/auth/refresh`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ refreshToken }),
-      signal: abortController.signal,
-    }).finally(() => clearTimeout(timeoutId))
+    try {
+      const response = await fetch(`${baseUrl()}/auth/refresh`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ refreshToken }),
+        signal: abortController.signal,
+      }).finally(() => clearTimeout(timeoutId))
 
-    if (!response.ok) {
-      const errorPayload = await parseResponseBody(response)
+      if (!response.ok) {
+        const errorPayload = await parseResponseBody(response)
+        throw normalizeApiError(response.status, errorPayload)
+      }
+
+      const payload = (await parseResponseBody(response)) as AuthTokens
+      authHandlers?.onRefreshSuccess(payload)
+      return payload
+    } catch (error) {
       authHandlers?.onRefreshFailure()
-      throw normalizeApiError(response.status, errorPayload)
-    }
 
-    const payload = (await parseResponseBody(response)) as AuthTokens
-    authHandlers?.onRefreshSuccess(payload)
-    return payload
+      if (error instanceof ApiError) {
+        throw error
+      }
+
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new ApiError(408, {
+          code: 'NETWORK_TIMEOUT',
+          message: 'Request timed out',
+        })
+      }
+
+      throw new ApiError(500, {
+        code: 'NETWORK_ERROR',
+        message: 'Unable to reach server',
+      })
+    }
   })()
 
   try {
