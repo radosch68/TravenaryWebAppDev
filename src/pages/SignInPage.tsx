@@ -50,6 +50,7 @@ export function SignInPage(): ReactElement {
 
   const form = useForm<SignInFormData>({
     resolver: zodResolver(signInSchema),
+    mode: 'onBlur',
     defaultValues: {
       email: '',
       password: '',

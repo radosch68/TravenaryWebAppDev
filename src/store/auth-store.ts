@@ -65,7 +65,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     tokenService.setRefreshToken(tokens.refreshToken)
     tokenService.scheduleProactiveRefresh(tokens.expiresIn, () => {
       get().clearSession()
-      window.location.assign('/signin')
+      window.location.assign(`${import.meta.env.BASE_URL}signin`)
     })
     set(applyTokens(tokens))
   },

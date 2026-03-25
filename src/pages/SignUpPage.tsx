@@ -26,6 +26,7 @@ export function SignUpPage(): ReactElement {
 
   const form = useForm<SignUpFormData>({
     resolver: zodResolver(signUpSchema),
+    mode: 'onBlur',
     defaultValues: {
       email: '',
       password: '',
@@ -41,7 +42,7 @@ export function SignUpPage(): ReactElement {
   const onSubmit = form.handleSubmit(async (values) => {
     setApiError('')
     try {
-      const tokens = await signUp(values)
+      const tokens = await signUp({ ...values, displayName: values.displayName || undefined })
       await bootstrapAuthenticatedSession(tokens)
       navigate('/')
     } catch (error) {

@@ -1,7 +1,10 @@
 import type { ReactElement } from 'react'
 import { useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 
 export function GithubOAuthCallbackPage(): ReactElement {
+  const { t } = useTranslation(['auth'])
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
 
@@ -21,7 +24,7 @@ export function GithubOAuthCallbackPage(): ReactElement {
   return (
     <main className="auth-shell">
       <section className="auth-card">
-        <p>Completing GitHub sign-in...</p>
+        <p role="status" aria-live="polite">{t('auth:social.oauthCallback')}</p>
       </section>
     </main>
   )

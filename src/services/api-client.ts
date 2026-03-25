@@ -86,13 +86,16 @@ export async function refreshSessionTokens(): Promise<AuthTokens> {
   }
 
   refreshInFlight = (async () => {
+    const abortController = new AbortController()
+    const timeoutId = setTimeout(() => abortController.abort(), DEFAULT_TIMEOUT_MS)
     const response = await fetch(`${baseUrl()}/auth/refresh`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ refreshToken }),
-    })
+      signal: abortController.signal,
+    }).finally(() => clearTimeout(timeoutId))
 
     if (!response.ok) {
       const errorPayload = await parseResponseBody(response)

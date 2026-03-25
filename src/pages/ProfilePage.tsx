@@ -88,10 +88,14 @@ export function ProfilePage(): ReactElement {
   })
 
   const submitDisplayName = displayNameForm.handleSubmit(async (values) => {
-    const updatedProfile = await updateDisplayName(values.displayName)
-    setProfile(updatedProfile)
-    setDisplayNameStatus(t('profile:messages.saved'))
-    window.setTimeout(() => setDisplayNameStatus(''), 4000)
+    try {
+      const updatedProfile = await updateDisplayName(values.displayName)
+      setProfile(updatedProfile)
+      setDisplayNameStatus(t('profile:messages.saved'))
+      window.setTimeout(() => setDisplayNameStatus(''), 4000)
+    } catch {
+      setDisplayNameStatus(t('profile:messages.displayNameSaveError'))
+    }
   })
 
   const submitPassword = passwordForm.handleSubmit(async (values) => {

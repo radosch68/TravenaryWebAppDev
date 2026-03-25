@@ -39,6 +39,7 @@
     "saved": "Profil byl aktualizován.",
     "passwordSaved": "Heslo bylo úspěšně změněno.",
     "passwordError": "Současné heslo je nesprávné.",
+    "displayNameSaveError": "Zobrazované jméno se nepodařilo uložit. Zkuste to znovu.",
     "deleteError": "Účet se nepodařilo smazat. Zkontrolujte heslo a zkuste to znovu.",
     "deletePasswordRequired": "Smazání účtu potvrďte heslem.",
     "deletePasswordRequiredMixed": "Tento účet podporuje přihlášení heslem i sociálním účtem. Smazání potvrďte heslem.",
