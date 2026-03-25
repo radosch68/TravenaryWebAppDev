@@ -142,6 +142,11 @@ button:disabled {
   color: var(--danger);
 }
 
+.auth-link-disabled {
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
 .social-row,
 .button-row {
   display: grid;

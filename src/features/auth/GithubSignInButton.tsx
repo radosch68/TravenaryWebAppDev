@@ -3,13 +3,15 @@ import type { ReactElement } from 'react'
 interface GithubSignInButtonProps {
   onClick: () => Promise<void>
   label: string
+  disabled?: boolean
 }
 
-export function GithubSignInButton({ onClick, label }: GithubSignInButtonProps): ReactElement {
+export function GithubSignInButton({ onClick, label, disabled = false }: GithubSignInButtonProps): ReactElement {
   return (
     <button
       type="button"
       className="social-provider-btn social-provider-btn--github"
+      disabled={disabled}
       onClick={() => void onClick()}
     >
       <span className="social-provider-btn__icon" aria-hidden="true">

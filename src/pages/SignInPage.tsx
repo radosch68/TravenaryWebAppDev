@@ -1,6 +1,6 @@
 import type { ReactElement } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
@@ -12,9 +12,29 @@ import { GoogleSignInButton } from '@/features/auth/GoogleSignInButton'
 import { completeSocialAuth, handleSocialAuth } from '@/features/auth/social-auth-handlers'
 import { type SignInFormData, signInSchema } from '@/features/auth/schemas'
 import { acquireGithubAuthCode } from '../features/auth/github-auth'
+import { apiRequest } from '@/services/api-client'
 import { signIn } from '@/services/auth-service'
 import { ApiError } from '@/services/contracts'
 import { useAuthStore } from '@/store/auth-store'
+
+const HEALTH_CHECK_INTERVAL_MS = 1_000
+const HEALTH_CHECK_TIMEOUT_MS = 2_500
+const HEALTH_READY_CACHE_KEY = 'backendHealthReadyAt'
+const HEALTH_READY_CACHE_TTL_MS = 90_000
+
+function hasRecentHealthyBackend(): boolean {
+  const rawValue = window.sessionStorage.getItem(HEALTH_READY_CACHE_KEY)
+  if (!rawValue) {
+    return false
+  }
+
+  const lastHealthyAt = Number(rawValue)
+  if (!Number.isFinite(lastHealthyAt)) {
+    return false
+  }
+
+  return Date.now() - lastHealthyAt <= HEALTH_READY_CACHE_TTL_MS
+}
 
 export function SignInPage(): ReactElement {
   const navigate = useNavigate()
@@ -23,6 +43,9 @@ export function SignInPage(): ReactElement {
     (state) => state.bootstrapAuthenticatedSession,
   )
   const [apiError, setApiError] = useState('')
+  const [isBackendReady, setIsBackendReady] = useState(() => hasRecentHealthyBackend())
+  const [isBackendChecking, setIsBackendChecking] = useState(() => !hasRecentHealthyBackend())
+  const healthProbeInFlight = useRef(false)
 
   const form = useForm<SignInFormData>({
     resolver: zodResolver(signInSchema),
@@ -36,8 +59,56 @@ export function SignInPage(): ReactElement {
   const googleEnabled = socialAuthEnabled && Boolean(import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID)
   const appleEnabled = socialAuthEnabled && Boolean(import.meta.env.VITE_APPLE_OAUTH_CLIENT_ID)
   const githubEnabled = socialAuthEnabled && Boolean(import.meta.env.VITE_GITHUB_OAUTH_CLIENT_ID)
+  const authActionsDisabled = !isBackendReady
+
+  useEffect(() => {
+    let disposed = false
+
+    const probeHealth = async (): Promise<void> => {
+      if (disposed || healthProbeInFlight.current || isBackendReady) {
+        return
+      }
+
+      healthProbeInFlight.current = true
+      try {
+        await apiRequest<{ status?: string }>('/health', {
+          timeoutMs: HEALTH_CHECK_TIMEOUT_MS,
+        })
+
+        if (!disposed) {
+          setIsBackendReady(true)
+          window.sessionStorage.setItem(HEALTH_READY_CACHE_KEY, String(Date.now()))
+        }
+      } catch {
+        if (!disposed) {
+          setIsBackendReady((previous) => previous)
+        }
+      } finally {
+        healthProbeInFlight.current = false
+        if (!disposed) {
+          setIsBackendChecking(false)
+        }
+      }
+    }
+
+    void probeHealth()
+
+    const intervalId = window.setInterval(() => {
+      void probeHealth()
+    }, HEALTH_CHECK_INTERVAL_MS)
+
+    return () => {
+      disposed = true
+      window.clearInterval(intervalId)
+    }
+  }, [isBackendReady])
 
   const onSubmit = form.handleSubmit(async (values) => {
+    if (authActionsDisabled) {
+      setApiError(t('auth:social.backendStarting'))
+      return
+    }
+
     setApiError('')
     try {
       const tokens = await signIn(values)
@@ -54,15 +125,30 @@ export function SignInPage(): ReactElement {
   })
 
   const onApple = async (): Promise<void> => {
+    if (authActionsDisabled) {
+      setApiError(t('auth:social.backendStarting'))
+      return
+    }
+
     await handleSocialAuth('apple', acquireAppleIdToken, navigate, setApiError)
   }
 
   const onGoogleIdToken = async (idToken: string): Promise<void> => {
+    if (authActionsDisabled) {
+      setApiError(t('auth:social.backendStarting'))
+      return
+    }
+
     setApiError('')
     await completeSocialAuth('google', idToken, navigate, setApiError)
   }
 
   const onGithub = async (): Promise<void> => {
+    if (authActionsDisabled) {
+      setApiError(t('auth:social.backendStarting'))
+      return
+    }
+
     await handleSocialAuth('github', acquireGithubAuthCode, navigate, setApiError)
   }
 
@@ -76,13 +162,23 @@ export function SignInPage(): ReactElement {
         {googleEnabled || appleEnabled || githubEnabled ? (
           <div className="social-row">
             {googleEnabled ? (
-              <GoogleSignInButton onIdToken={onGoogleIdToken} />
+              authActionsDisabled ? (
+                <button className="social-provider-btn" disabled type="button">
+                  {t('auth:actions.continueGoogle')}
+                </button>
+              ) : (
+                <GoogleSignInButton onIdToken={onGoogleIdToken} />
+              )
             ) : null}
             {githubEnabled ? (
-              <GithubSignInButton onClick={onGithub} label={t('auth:actions.continueGithub')} />
+              <GithubSignInButton
+                disabled={authActionsDisabled}
+                onClick={onGithub}
+                label={t('auth:actions.continueGithub')}
+              />
             ) : null}
             {appleEnabled ? (
-              <button type="button" onClick={() => void onApple()}>
+              <button type="button" disabled={authActionsDisabled} onClick={() => void onApple()}>
                 {t('auth:actions.continueApple')}
               </button>
             ) : null}
@@ -90,6 +186,8 @@ export function SignInPage(): ReactElement {
         ) : (
           <p>{t('auth:social.disabled')}</p>
         )}
+
+        {!isBackendReady || isBackendChecking ? <p>{t('auth:social.backendStarting')}</p> : null}
 
         <p className="auth-divider">{t('auth:signIn.useEmail')}</p>
 
@@ -108,7 +206,7 @@ export function SignInPage(): ReactElement {
 
           {apiError && <p className="error">{apiError}</p>}
 
-          <button type="submit" disabled={form.formState.isSubmitting}>
+          <button type="submit" disabled={form.formState.isSubmitting || authActionsDisabled}>
             {form.formState.isSubmitting
               ? t('auth:actions.signingIn')
               : t('auth:actions.signIn')}
@@ -116,7 +214,14 @@ export function SignInPage(): ReactElement {
         </form>
 
         <p>
-          {t('auth:signIn.noAccount')} <Link to="/signup">{t('auth:actions.createAccount')}</Link>
+          {t('auth:signIn.noAccount')}{' '}
+          {isBackendReady ? (
+            <Link to="/signup">{t('auth:actions.createAccount')}</Link>
+          ) : (
+            <span aria-disabled="true" className="auth-link-disabled">
+              {t('auth:actions.createAccount')}
+            </span>
+          )}
         </p>
       </section>
     </main>
