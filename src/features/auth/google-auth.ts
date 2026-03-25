@@ -1,6 +1,5 @@
 const SDK_POLL_INTERVAL_MS = 200
 const SDK_LOAD_TIMEOUT_MS = 5_000
-const GOOGLE_BUTTON_SCALE = 1.2
 
 export function renderGoogleSignInButton(
   element: HTMLElement,
@@ -36,7 +35,7 @@ export function renderGoogleSignInButton(
       size: 'large',
       shape: 'pill',
       text: 'continue_with',
-      width: Math.max(1, Math.floor(width / GOOGLE_BUTTON_SCALE)),
+      width,
       locale,
     })
   }

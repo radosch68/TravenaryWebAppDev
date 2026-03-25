@@ -197,7 +197,13 @@ button:disabled {
 }
 
 .social-row > * {
-  width: 100%;
+  width: min(100%, var(--auth-content-max));
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.social-row {
+  justify-items: center;
 }
 
 .social-provider-btn {
@@ -243,13 +249,15 @@ button:disabled {
 .google-signin-btn {
   width: 100%;
   min-height: 48px;
-  overflow: hidden;
+  overflow: visible;
+  -webkit-tap-highlight-color: transparent;
+  display: flex;
+  justify-content: center;
 }
 
-.google-signin-btn > div,
-.google-signin-btn iframe {
-  transform: scale(1.2);
-  transform-origin: left top;
+.google-signin-btn > * {
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .auth-divider {
