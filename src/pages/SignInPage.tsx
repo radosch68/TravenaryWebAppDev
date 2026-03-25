@@ -187,7 +187,13 @@ export function SignInPage(): ReactElement {
           <p>{t('auth:social.disabled')}</p>
         )}
 
-        {!isBackendReady || isBackendChecking ? <p>{t('auth:social.backendStarting')}</p> : null}
+        {!isBackendReady || isBackendChecking ? (
+          <div className="backend-waking-alert" role="status" aria-live="polite">
+            <span className="backend-waking-alert__spinner" aria-hidden="true" />
+            <span>{t('auth:social.backendStartingLine1')}</span>
+            <span>{t('auth:social.backendStartingLine2')}</span>
+          </div>
+        ) : null}
 
         <p className="auth-divider">{t('auth:signIn.useEmail')}</p>
 

@@ -147,6 +147,37 @@ button:disabled {
   cursor: not-allowed;
 }
 
+.backend-waking-alert {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.2rem 0.6rem;
+  align-items: center;
+  border: 1px solid rgba(173, 93, 24, 0.3);
+  border-radius: 12px;
+  padding: 0.7rem 0.85rem;
+  background: linear-gradient(135deg, rgba(255, 194, 117, 0.28), rgba(255, 246, 220, 0.62));
+  color: #6a4115;
+  font-size: 0.95rem;
+  line-height: 1.35;
+  margin-top: var(--space-2);
+}
+
+.backend-waking-alert__spinner {
+  width: 0.95rem;
+  height: 0.95rem;
+  border: 2px solid rgba(106, 65, 21, 0.22);
+  border-top-color: #a65d18;
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+  grid-row: 1 / span 2;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .social-row,
 .button-row {
   display: grid;
