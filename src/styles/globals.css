@@ -40,8 +40,8 @@ a {
 }
 
 .auth-shell {
-  --auth-card-max: 560px;
-  --auth-content-max: 500px;
+  --auth-card-max: 540px;
+  --auth-content-max: 480px;
   display: grid;
   gap: var(--space-3);
   align-content: start;
