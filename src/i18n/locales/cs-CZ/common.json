@@ -62,6 +62,51 @@
       "private": "Soukromý",
       "shared": "Sdílený",
       "public": "Veřejný"
+    },
+    "edit": {
+      "titlePlaceholder": "Název itineráře",
+      "descriptionPlaceholder": "Popište svou cestu…",
+      "startDate": "Začátek",
+      "endDate": "Konec",
+      "datesCascadeNotice": "Změna tohoto data posune všechna naplánovaná data.",
+      "tags": "Tagy",
+      "tagPlaceholder": "Přidat tag…",
+      "coverPhoto": "Foto obálky",
+      "coverPhotoUrlPlaceholder": "URL obrázku",
+      "coverPhotoCaptionPlaceholder": "Popisek",
+      "coverPhotoSave": "Uložit fotku",
+      "coverPhotoRemove": "Odebrat fotku",
+      "coverPhotoCancel": "Zrušit",
+      "titleRequired": "Název je povinný",
+      "saveFailed": "Uložení selhalo. Klikněte pro opakování.",
+      "saving": "Ukládání…"
+    },
+    "days": {
+      "expand": "Rozbalit den",
+      "collapse": "Sbalit den",
+      "openDetail": "Zobrazit detail dne",
+      "noActivities": "Zatím žádné aktivity",
+      "activityCount_one": "{{count}} aktivita",
+      "activityCount_few": "{{count}} aktivity",
+      "activityCount_other": "{{count}} aktivit"
+    },
+    "share": {
+      "title": "Sdílet",
+      "createLink": "Vytvořit odkaz ke sdílení",
+      "regenerateLink": "Vygenerovat nový odkaz",
+      "regenerateConfirm": "Vygenerování nového odkazu zneplatní aktuálně sdílený odkaz. Pokračovat?",
+      "revokeLink": "Zrušit odkaz",
+      "copyLink": "Kopírovat odkaz",
+      "linkCopied": "Odkaz zkopírován!",
+      "linkActive": "Odkaz ke sdílení je aktivní",
+      "linkInactive": "Žádný odkaz ke sdílení",
+      "shareError": "Odkaz ke sdílení se nepodařilo vytvořit.",
+      "revokeError": "Odkaz se nepodařilo zrušit.",
+      "sharedViewTitle": "Sdílený itinerář",
+      "sharedNotFound": "Tento itinerář není dostupný",
+      "sharedNotFoundMessage": "Odkaz mohl být zrušen nebo byl itinerář smazán.",
+      "sharedLoadError": "Itinerář se nepodařilo načíst.",
+      "poweredBy": "Sdíleno přes Travenary"
     }
   }
 }

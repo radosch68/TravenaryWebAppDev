@@ -7,6 +7,7 @@ import { ProtectedRoute } from './guards/ProtectedRoute'
 import { PublicOnlyRoute } from './guards/PublicOnlyRoute'
 import { ItineraryDetailPage } from '@/pages/ItineraryDetailPage'
 import { DayDetailPage } from '@/pages/DayDetailPage'
+import { SharedItineraryPage } from '@/pages/SharedItineraryPage'
 import { HomePage } from '../pages/HomePage'
 import { GithubOAuthCallbackPage } from '../pages/GithubOAuthCallbackPage'
 import { LinkProviderPage } from '../pages/LinkProviderPage'
@@ -54,6 +55,7 @@ export default function App(): ReactElement {
           }
         />
         <Route path="/oauth/github/callback" element={<GithubOAuthCallbackPage />} />
+        <Route path="/s/:shareToken" element={<SharedItineraryPage />} />
         <Route
           path="/"
           element={

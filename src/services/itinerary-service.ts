@@ -3,6 +3,8 @@ import type {
   ItineraryDetail,
   ItineraryListParams,
   ItineraryListResponse,
+  ShareTokenResponse,
+  SharedItineraryDetail,
 } from '@/services/contracts'
 
 function toQuery(params: ItineraryListParams = {}): string {
@@ -61,5 +63,43 @@ export async function deleteItinerary(itineraryId: string): Promise<void> {
     method: 'DELETE',
     protected: true,
     skipAuthRefreshOn401: true,
+  })
+}
+
+export async function updateItinerary(
+  itineraryId: string,
+  data: Record<string, unknown>,
+): Promise<ItineraryDetail> {
+  return apiRequest<ItineraryDetail>(`/itineraries/${itineraryId}`, {
+    method: 'PATCH',
+    body: data,
+    protected: true,
+  })
+}
+
+export async function createShareLink(
+  itineraryId: string,
+): Promise<ShareTokenResponse> {
+  return apiRequest<ShareTokenResponse>(`/itineraries/${itineraryId}/share`, {
+    method: 'POST',
+    protected: true,
+  })
+}
+
+export async function revokeShareLink(
+  itineraryId: string,
+): Promise<void> {
+  await apiRequest<void>(`/itineraries/${itineraryId}/share`, {
+    method: 'DELETE',
+    protected: true,
+  })
+}
+
+export async function getSharedItinerary(
+  shareToken: string,
+): Promise<SharedItineraryDetail> {
+  return apiRequest<SharedItineraryDetail>(`/shared/${shareToken}`, {
+    method: 'GET',
+    protected: false,
   })
 }

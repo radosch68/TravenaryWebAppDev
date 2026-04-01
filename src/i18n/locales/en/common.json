@@ -60,6 +60,50 @@
       "private": "Private",
       "shared": "Shared",
       "public": "Public"
+    },
+    "edit": {
+      "titlePlaceholder": "Itinerary title",
+      "descriptionPlaceholder": "Describe your trip…",
+      "startDate": "Start date",
+      "endDate": "End date",
+      "datesCascadeNotice": "Changing this date will shift all scheduled day dates.",
+      "tags": "Tags",
+      "tagPlaceholder": "Add tag…",
+      "coverPhoto": "Cover photo",
+      "coverPhotoUrlPlaceholder": "Image URL",
+      "coverPhotoCaptionPlaceholder": "Caption",
+      "coverPhotoSave": "Save photo",
+      "coverPhotoRemove": "Remove photo",
+      "coverPhotoCancel": "Cancel",
+      "titleRequired": "Title is required",
+      "saveFailed": "Save failed. Click to retry.",
+      "saving": "Saving…"
+    },
+    "days": {
+      "expand": "Expand day",
+      "collapse": "Collapse day",
+      "openDetail": "View day detail",
+      "noActivities": "No activities yet",
+      "activityCount_one": "{{count}} activity",
+      "activityCount_other": "{{count}} activities"
+    },
+    "share": {
+      "title": "Share",
+      "createLink": "Create share link",
+      "regenerateLink": "Regenerate link",
+      "regenerateConfirm": "Regenerating will invalidate the currently shared link. Continue?",
+      "revokeLink": "Revoke link",
+      "copyLink": "Copy link",
+      "linkCopied": "Link copied!",
+      "linkActive": "Share link is active",
+      "linkInactive": "No share link",
+      "shareError": "Could not create share link.",
+      "revokeError": "Could not revoke share link.",
+      "sharedViewTitle": "Shared Itinerary",
+      "sharedNotFound": "This itinerary is not available",
+      "sharedNotFoundMessage": "The link may have been revoked or the itinerary deleted.",
+      "sharedLoadError": "Could not load this itinerary.",
+      "poweredBy": "Shared via Travenary"
     }
   }
 }

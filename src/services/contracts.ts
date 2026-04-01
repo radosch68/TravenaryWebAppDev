@@ -98,9 +98,19 @@ export interface ItineraryDetail {
   tags: string[]
   visibility: 'private' | 'shared' | 'public'
   coverPhoto?: WebReference
+  startDate?: string
+  endDate?: string
+  hasShareLink: boolean
   days: ItineraryDay[]
   createdAt: string
   updatedAt: string
+}
+
+export type SharedItineraryDetail = Omit<ItineraryDetail, 'userId' | 'hasShareLink'>
+
+export interface ShareTokenResponse {
+  shareToken: string
+  shareUrl: string
 }
 
 export interface ItineraryListResponse {
