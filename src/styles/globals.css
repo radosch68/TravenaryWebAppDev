@@ -1199,7 +1199,7 @@ button:disabled {
 .itinerary-day-header {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
-  align-items: baseline;
+  align-items: start;
   gap: var(--space-2);
 }
 

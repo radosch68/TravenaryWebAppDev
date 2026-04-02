@@ -43,8 +43,8 @@ export function ItineraryDetailPage(): ReactElement {
   const [suppressRowNavigation, setSuppressRowNavigation] = useState(false)
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
+    useSensor(PointerSensor, { activationConstraint: { delay: 75, tolerance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
   )
 
   const dragHappenedRef = useRef(false)
@@ -466,6 +466,7 @@ export function ItineraryDetailPage(): ReactElement {
                   key={day.dayNumber}
                   day={day}
                   index={index}
+                  totalDays={itinerary.days.length}
                   itineraryId={itinerary.id}
                   dragHappenedRef={dragHappenedRef}
                   suppressRowNavigation={suppressRowNavigation}
@@ -522,16 +523,20 @@ export function ItineraryDetailPage(): ReactElement {
 interface SortableDayRowProps {
   day: ItineraryDay
   index: number
+  totalDays: number
   itineraryId: string
   dragHappenedRef: MutableRefObject<boolean>
   suppressRowNavigation: boolean
 }
 
-function SortableDayRow({ day, index, itineraryId, dragHappenedRef, suppressRowNavigation }: SortableDayRowProps): ReactElement {
+function SortableDayRow({ day, index, totalDays, itineraryId, dragHappenedRef, suppressRowNavigation }: SortableDayRowProps): ReactElement {
   const { t, i18n } = useTranslation(['common'])
   const { setNodeRef, transform, transition, isDragging, listeners, attributes } = useSortable({
     id: String(day.dayNumber),
+    disabled: totalDays <= 1,
   })
+  const isSingleDay = totalDays <= 1
+  const gripVariant: GripIconProps['variant'] = index === 0 ? (isSingleDay ? 'none' : 'down') : index === totalDays - 1 ? 'up' : 'both'
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -559,14 +564,16 @@ function SortableDayRow({ day, index, itineraryId, dragHappenedRef, suppressRowN
       >
         <div className="itinerary-day-header">
           <span className="itinerary-day-header__weekday">
-            <span
-              className="itinerary-day-header__weekday--drag"
-              style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
-              {...listeners}
-              {...attributes}
-            >
-              <GripIcon />
-            </span>
+            {isSingleDay ? null : (
+              <span
+                className="itinerary-day-header__weekday--drag"
+                style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+                {...listeners}
+                {...attributes}
+              >
+                <GripIcon variant={gripVariant} />
+              </span>
+            )}
             <span>{day.date ? formatWeekday(day.date, i18n.language) : '—'}</span>
           </span>
           <span
@@ -792,7 +799,11 @@ function PencilIcon(): ReactElement {
   )
 }
 
-function GripIcon(): ReactElement {
+interface GripIconProps {
+  variant: 'up' | 'down' | 'both' | 'none'
+}
+
+function GripIcon({ variant }: GripIconProps): ReactElement {
   return (
     <svg
       width="24"
@@ -802,7 +813,17 @@ function GripIcon(): ReactElement {
       aria-hidden="true"
       style={{ flexShrink: 0 }}
     >
-      <path d="M9 3L12 1l3 2" stroke="currentColor" strokeOpacity="0.9" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      {variant === 'up' || variant === 'both' ? (
+        <path d="M9 3L12 1l3 2" stroke="currentColor" strokeOpacity="0.9" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      ) : variant === 'down' ? (
+        <>
+          <circle cx="4" cy="3" r="1" fill="currentColor" fillOpacity="0.55" />
+          <circle cx="8" cy="3" r="1" fill="currentColor" fillOpacity="0.55" />
+          <circle cx="12" cy="3" r="1" fill="currentColor" fillOpacity="0.55" />
+          <circle cx="16" cy="3" r="1" fill="currentColor" fillOpacity="0.55" />
+          <circle cx="20" cy="3" r="1" fill="currentColor" fillOpacity="0.55" />
+        </>
+      ) : null}
       <circle cx="4" cy="7" r="1" fill="currentColor" fillOpacity="0.55" />
       <circle cx="8" cy="7" r="1" fill="currentColor" fillOpacity="0.55" />
       <circle cx="12" cy="7" r="1" fill="currentColor" fillOpacity="0.55" />
@@ -813,7 +834,17 @@ function GripIcon(): ReactElement {
       <circle cx="12" cy="11" r="1" fill="currentColor" fillOpacity="0.55" />
       <circle cx="16" cy="11" r="1" fill="currentColor" fillOpacity="0.55" />
       <circle cx="20" cy="11" r="1" fill="currentColor" fillOpacity="0.55" />
-      <path d="M9 15l3 2 3-2" stroke="currentColor" strokeOpacity="0.9" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      {variant === 'down' || variant === 'both' ? (
+        <path d="M9 15l3 2 3-2" stroke="currentColor" strokeOpacity="0.9" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      ) : variant === 'up' ? (
+        <>
+          <circle cx="4" cy="15" r="1" fill="currentColor" fillOpacity="0.55" />
+          <circle cx="8" cy="15" r="1" fill="currentColor" fillOpacity="0.55" />
+          <circle cx="12" cy="15" r="1" fill="currentColor" fillOpacity="0.55" />
+          <circle cx="16" cy="15" r="1" fill="currentColor" fillOpacity="0.55" />
+          <circle cx="20" cy="15" r="1" fill="currentColor" fillOpacity="0.55" />
+        </>
+      ) : null}
     </svg>
   )
 }
