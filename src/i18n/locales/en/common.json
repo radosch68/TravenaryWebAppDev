@@ -104,6 +104,18 @@
       "sharedNotFoundMessage": "The link may have been revoked or the itinerary deleted.",
       "sharedLoadError": "Could not load this itinerary.",
       "poweredBy": "Shared via Travenary"
+    },
+    "presentation": {
+      "planning": "Planning",
+      "timeline": "Timeline",
+      "anchored": "Anchored",
+      "flexible": "Flexible",
+      "markAnchored": "Mark as anchored",
+      "markFlexible": "Mark as flexible",
+      "blockedMoveAnchored": "This day has anchored activities — only days without mixed content can be reordered.",
+      "mixedDayHint": "This day has anchored activities that are locked to this date.",
+      "anchoredMarker": "Fixed commitment",
+      "toggleLabel": "Presentation"
     }
   }
 }

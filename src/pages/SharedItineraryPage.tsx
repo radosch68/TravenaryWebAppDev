@@ -1,25 +1,15 @@
 import type { ReactElement } from 'react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 
 import { BrandBanner } from '@/components/BrandBanner'
+import { ItineraryTimelineView } from '@/components/itinerary/ItineraryTimelineView'
 import { ApiError } from '@/services/contracts'
 import { getSharedItinerary } from '@/services/itinerary-service'
 import type { SharedItineraryDetail } from '@/services/contracts'
-import { formatLocalDate, formatWeekday } from '@/utils/date-format'
+import { formatLocalDate } from '@/utils/date-format'
 import { unsplashUrl } from '@/utils/unsplash-url'
-
-function computeDateSpan(days: SharedItineraryDetail['days'], locale: string): string | undefined {
-  const dated = days.map((day) => day.date).filter((value): value is string => Boolean(value))
-  if (dated.length === 0) return undefined
-  const sorted = [...dated].sort((left, right) => left.localeCompare(right))
-  const start = sorted[0]
-  const end = sorted[sorted.length - 1]
-  return start === end
-    ? formatLocalDate(start, locale)
-    : `${formatLocalDate(start, locale)} – ${formatLocalDate(end, locale)}`
-}
 
 export function SharedItineraryPage(): ReactElement {
   const { shareToken } = useParams<{ shareToken: string }>()
@@ -50,11 +40,6 @@ export function SharedItineraryPage(): ReactElement {
   useEffect(() => {
     void loadShared()
   }, [loadShared])
-
-  const dateSpan = useMemo(() => {
-    if (!itinerary) return ''
-    return computeDateSpan(itinerary.days, i18n.language) || t('common:itinerary.missingDate')
-  }, [itinerary, t, i18n.language])
 
   if (state === 'loading') {
     return (
@@ -128,53 +113,19 @@ export function SharedItineraryPage(): ReactElement {
           </div>
         ) : null}
 
-        <div className="itinerary-detail-meta">
-          <p>{dateSpan}</p>
-          <p>{t('common:itinerary.dayCount', { count: itinerary.days.length })}</p>
+        <div className="itinerary-detail-meta-grid">
+          <span className="itinerary-detail-meta-grid__left">
+            {itinerary.startDate ? formatLocalDate(itinerary.startDate, i18n.language) : t('common:itinerary.missingDate')}
+          </span>
+          <span className="itinerary-detail-meta-grid__right itinerary-detail-day-count">
+            {t('common:itinerary.dayCount', { count: itinerary.days.length })}
+          </span>
+          <span className="itinerary-detail-meta-grid__left">
+            {itinerary.endDate ? formatLocalDate(itinerary.endDate, i18n.language) : t('common:itinerary.missingDate')}
+          </span>
         </div>
 
-        <ul className="itinerary-day-list">
-          {itinerary.days.map((day, index) => (
-            <li
-              key={day.dayNumber}
-              className={`itinerary-day-list__item itinerary-day-list__item--${index % 2 === 0 ? 'odd' : 'even'}`}
-            >
-              <div className="itinerary-day-header">
-                <span className="itinerary-day-header__weekday">
-                  {day.date ? formatWeekday(day.date, i18n.language) : '—'}
-                </span>
-                <span className="itinerary-day-header__date">
-                  {day.date ? formatLocalDate(day.date, i18n.language) : t('common:itinerary.missingDate')}
-                </span>
-                <span className="itinerary-day-header__index">
-                  {t('common:itinerary.dayNumber', { dayNumber: day.dayNumber })}
-                </span>
-              </div>
-              {day.summary ? <p>{day.summary}</p> : null}
-
-              {day.activities.length > 0 ? (
-                <details className="itinerary-day-activities">
-                  <summary>
-                    {t('common:itinerary.days.activityCount', { count: day.activities.length })}
-                  </summary>
-                  <ul className="itinerary-day-activities__list">
-                    {day.activities.map((activity) => (
-                      <li key={activity.id} className="itinerary-day-activity">
-                        <span className="itinerary-day-activity__type">{activity.type}</span>
-                        <span className="itinerary-day-activity__title">{activity.title}</span>
-                        {activity.time ? (
-                          <span className="itinerary-day-activity__time">
-                            {activity.time}{activity.timeEnd ? ` – ${activity.timeEnd}` : ''}
-                          </span>
-                        ) : null}
-                      </li>
-                    ))}
-                  </ul>
-                </details>
-              ) : null}
-            </li>
-          ))}
-        </ul>
+        <ItineraryTimelineView itinerary={itinerary} />
 
         <p className="shared-page__footer">{t('common:itinerary.share.poweredBy')}</p>
       </section>

@@ -1,13 +1,16 @@
 import type { ReactElement } from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import { DashboardPaginationBar } from '@/components/DashboardPaginationBar'
 import { DraftReviewCarousel } from '@/components/itinerary/DraftReviewCarousel'
-import type { DraftItinerary } from '@/services/ai-generation.service'
+import type { DraftItinerary, ModelInfo } from '@/services/ai-generation.service'
 import {
   startGeneration,
   pollUntilComplete,
   selectDraft,
+  fetchAvailableModels,
+  getTimeoutForModel,
 } from '@/services/ai-generation.service'
 import { ApiError } from '@/services/contracts'
 
@@ -16,7 +19,6 @@ type ModalStep =
   | 'loading'
   | 'review'
   | 'saving'
-  | 'success'
   | 'error'
 
 interface GenerationModalProps {
@@ -39,21 +41,24 @@ const DEV_PROMPT_PRESET_IDS = [
 
 export function GenerationModal({ onClose, onFallback }: GenerationModalProps): ReactElement {
   const { t } = useTranslation(['ai-generation', 'common'])
+  const navigate = useNavigate()
 
   const [step, setStep] = useState<ModalStep>('input')
   const [prompt, setPrompt] = useState('')
-  const [selectedModel, setSelectedModel] = useState<'gpt-4o' | 'gpt-3.5-turbo'>('gpt-4o')
+  const [availableModels, setAvailableModels] = useState<ModelInfo[]>([])
+  const [selectedModel, setSelectedModel] = useState('')
   const [selectedPromptPreset, setSelectedPromptPreset] = useState('')
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [generationRequestId, setGenerationRequestId] = useState<string | null>(null)
   const [drafts, setDrafts] = useState<DraftItinerary[]>([])
   const [draftIndex, setDraftIndex] = useState(0)
+  const [aiModel, setAiModel] = useState<string | undefined>()
+  const [aiResponseTimeMs, setAiResponseTimeMs] = useState<number | undefined>()
   const [saveError, setSaveError] = useState<string | null>(null)
   const abortRef = useRef<boolean>(false)
   const abortControllerRef = useRef<AbortController | null>(null)
   const isMountedRef = useRef(true)
-  const successTimeoutRef = useRef<number | null>(null)
 
   const handleCancel = useCallback((): void => {
     abortRef.current = true
@@ -64,13 +69,18 @@ export function GenerationModal({ onClose, onFallback }: GenerationModalProps): 
   useEffect(() => {
     isMountedRef.current = true
 
+    fetchAvailableModels().then((models) => {
+      if (isMountedRef.current && models.length > 0) {
+        setAvailableModels(models)
+        const defaultModel = models.find((m) => m.id === 'gpt-4o') ?? models[0]
+        setSelectedModel(defaultModel.id)
+      }
+    }).catch(() => { /* fallback: dropdown stays empty, generation uses server default */ })
+
     return () => {
       isMountedRef.current = false
       abortRef.current = true
       abortControllerRef.current?.abort()
-      if (successTimeoutRef.current !== null) {
-        window.clearTimeout(successTimeoutRef.current)
-      }
     }
   }, [])
 
@@ -119,7 +129,7 @@ export function GenerationModal({ onClose, onFallback }: GenerationModalProps): 
         if (abortRef.current) {
           throw new ApiError(499, { code: 'REQUEST_ABORTED', message: 'Request was aborted' })
         }
-      }, abortController.signal)
+      }, abortController.signal, getTimeoutForModel(selectedModel))
 
       if (!isMountedRef.current || abortController.signal.aborted) {
         return
@@ -128,6 +138,8 @@ export function GenerationModal({ onClose, onFallback }: GenerationModalProps): 
       if (result.status === 'completed' && result.drafts && result.drafts.length > 0) {
         setDrafts(result.drafts)
         setDraftIndex(0)
+        setAiModel(result.aiModel)
+        setAiResponseTimeMs(result.aiResponseTimeMs)
         setStep('review')
       } else {
         setErrorMessage(
@@ -162,14 +174,11 @@ export function GenerationModal({ onClose, onFallback }: GenerationModalProps): 
     setSaveError(null)
 
     try {
-      await selectDraft(draftId, reqId, selectedPhotoUrl)
+      const result = await selectDraft(draftId, reqId, selectedPhotoUrl)
       if (!isMountedRef.current) {
         return
       }
-      setStep('success')
-      successTimeoutRef.current = window.setTimeout(() => {
-        onClose()
-      }, 1500)
+      navigate(`/itineraries/${result.itineraryId}`)
     } catch (err: unknown) {
       if (!isMountedRef.current) {
         return
@@ -240,16 +249,13 @@ export function GenerationModal({ onClose, onFallback }: GenerationModalProps): 
                   <select
                     id="generation-model"
                     value={selectedModel}
-                    onChange={(e) =>
-                      setSelectedModel(e.target.value as 'gpt-4o' | 'gpt-3.5-turbo')
-                    }
+                    onChange={(e) => setSelectedModel(e.target.value)}
                   >
-                    <option value="gpt-4o">
-                      {t('ai-generation:modal.modelGpt4o')}
-                    </option>
-                    <option value="gpt-3.5-turbo">
-                      {t('ai-generation:modal.modelGpt35')}
-                    </option>
+                    {availableModels.map((model) => (
+                      <option key={model.id} value={model.id}>
+                        {model.label}
+                      </option>
+                    ))}
                   </select>
 
                   <label htmlFor="generation-prompt-preset" className="generation-modal__label">
@@ -309,7 +315,10 @@ export function GenerationModal({ onClose, onFallback }: GenerationModalProps): 
                 {t('ai-generation:modal.generating')}
               </p>
               <p className="generation-modal__loading-hint">
-                {t('ai-generation:modal.generatingHint')}
+                {t(`ai-generation:modal.generatingHint_${selectedModel}`, {
+                  keySeparator: false,
+                  defaultValue: t('ai-generation:modal.generatingHint'),
+                })}
               </p>
             </div>
           )}
@@ -335,6 +344,8 @@ export function GenerationModal({ onClose, onFallback }: GenerationModalProps): 
                 saveError={saveError}
                 currentIndex={draftIndex}
                 onIndexChange={setDraftIndex}
+                aiModel={aiModel}
+                aiResponseTimeMs={aiResponseTimeMs}
               />
               <DashboardPaginationBar
                 page={draftIndex + 1}
@@ -347,12 +358,6 @@ export function GenerationModal({ onClose, onFallback }: GenerationModalProps): 
               />
             </>
           ) : null}
-
-          {step === 'success' && (
-            <div className="generation-modal__success">
-              <p>{t('ai-generation:carousel.saved')}</p>
-            </div>
-          )}
 
           {step === 'error' && (
             <div className="generation-modal__error-state">

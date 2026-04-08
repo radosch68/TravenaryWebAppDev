@@ -14,7 +14,10 @@
     "generateButton": "Generovat",
     "cancelButton": "Zrušit",
     "generating": "Generuji itineráře...",
-    "generatingHint": "Obvykle to trvá asi 15 sekund",
+    "generatingHint": "Může to trvat až 2 minuty",
+    "generatingHint_gpt-3.5-turbo": "Může to trvat až 1,5 minuty",
+    "generatingHint_gpt-4o": "Může to trvat až 2 minuty",
+    "generatingHint_gpt-5.4": "Může to trvat až 3 minuty",
     "retryButton": "Zkusit znovu",
     "useTemplateButton": "Použít šablonu",
     "errorTitle": "Generování se nezdařilo",
@@ -82,7 +85,11 @@
     "moreActivities_one": "další aktivita",
     "moreActivities_few": "další aktivity",
     "moreActivities_other": "dalších aktivit",
+    "dayPlan": "Plán po dnech",
+    "dayLabel": "Den {{n}}",
     "tags": "Tagy",
-    "dateRange": "{{startDate}} – {{endDate}}"
+    "dateRange": "{{startDate}} – {{endDate}}",
+    "generationFootnote": "Vygenerováno modelem {{model}} za {{seconds}}s",
+    "unknownModel": "Neznámý model"
   }
 }

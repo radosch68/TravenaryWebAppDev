@@ -107,6 +107,18 @@
       "sharedNotFoundMessage": "Odkaz mohl být zrušen nebo byl itinerář smazán.",
       "sharedLoadError": "Itinerář se nepodařilo načíst.",
       "poweredBy": "Sdíleno přes Travenary"
+    },
+    "presentation": {
+      "planning": "Plánování",
+      "timeline": "Časová osa",
+      "anchored": "Ukotvené",
+      "flexible": "Volné",
+      "markAnchored": "Označit jako ukotvené",
+      "markFlexible": "Označit jako volné",
+      "blockedMoveAnchored": "Tento den obsahuje ukotvené aktivity — přesouvat lze pouze dny bez smíšeného obsahu.",
+      "mixedDayHint": "Tento den má ukotvené aktivity, které jsou vázané na toto datum.",
+      "anchoredMarker": "Pevný závazek",
+      "toggleLabel": "Zobrazení"
     }
   }
 }

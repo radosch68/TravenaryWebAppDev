@@ -1,9 +1,15 @@
 import { apiRequest } from '@/services/api-client'
 import { ApiError } from '@/services/contracts'
 
+export interface DraftBlock {
+  label: string
+  activities: string[]
+}
+
 export interface DraftDay {
   date: string
   activities: string[]
+  blocks?: DraftBlock[] | null
   notesForDay?: string | null
 }
 
@@ -31,6 +37,8 @@ export interface GenerationStatusResponse {
   status: 'pending' | 'completed' | 'failed'
   drafts?: DraftItinerary[]
   errorMessage?: string
+  aiModel?: string
+  aiResponseTimeMs?: number
 }
 
 export interface SelectDraftResponse {
@@ -39,8 +47,34 @@ export interface SelectDraftResponse {
   message: string
 }
 
-const POLL_INTERVAL_MS = 2000
-const POLL_TIMEOUT_MS = 60000
+export interface ModelInfo {
+  id: string
+  label: string
+}
+
+const MODEL_TIMEOUT_MS: Record<string, number> = {
+  'gpt-3.5-turbo': 90_000,
+  'gpt-4o': 120_000,
+  'gpt-5.4': 180_000,
+}
+const DEFAULT_TIMEOUT_MS = 120_000
+
+const POLL_SCHEDULE_MS = [1000, 5000, 4000, 3000, 2000, 1000]
+
+export function getTimeoutForModel(model?: string): number {
+  if (model && model in MODEL_TIMEOUT_MS) {
+    return MODEL_TIMEOUT_MS[model]
+  }
+  return DEFAULT_TIMEOUT_MS
+}
+
+export async function fetchAvailableModels(signal?: AbortSignal): Promise<ModelInfo[]> {
+  const response = await apiRequest<{ models: ModelInfo[] }>(
+    '/ai-generation/models',
+    { method: 'GET', protected: true, signal },
+  )
+  return response.models
+}
 
 export async function startGeneration(
   prompt: string,
@@ -98,8 +132,10 @@ export async function pollUntilComplete(
   generationRequestId: string,
   onTick?: () => void,
   signal?: AbortSignal,
+  timeoutMs?: number,
 ): Promise<GenerationStatusResponse> {
-  const deadline = Date.now() + POLL_TIMEOUT_MS
+  const deadline = Date.now() + (timeoutMs ?? DEFAULT_TIMEOUT_MS)
+  let pollIndex = 0
 
   while (Date.now() < deadline) {
     if (signal?.aborted) {
@@ -113,7 +149,11 @@ export async function pollUntilComplete(
     }
 
     onTick?.()
-    await waitForNextPoll(POLL_INTERVAL_MS, signal)
+    const delayMs = pollIndex < POLL_SCHEDULE_MS.length
+      ? POLL_SCHEDULE_MS[pollIndex]
+      : 1000
+    pollIndex++
+    await waitForNextPoll(delayMs, signal)
   }
 
   throw new ApiError(408, {

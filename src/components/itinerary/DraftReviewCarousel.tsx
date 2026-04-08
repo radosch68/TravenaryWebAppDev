@@ -1,7 +1,7 @@
 import type { ReactElement } from 'react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { DraftItinerary } from '@/services/ai-generation.service'
+import type { DraftItinerary, DraftDay } from '@/services/ai-generation.service'
 import { formatDateRange } from '@/utils/date-format'
 import { unsplashUrl } from '@/utils/unsplash-url'
 
@@ -13,6 +13,8 @@ interface DraftReviewCarouselProps {
   saveError: string | null
   currentIndex: number
   onIndexChange: (index: number) => void
+  aiModel?: string
+  aiResponseTimeMs?: number
 }
 
 export function DraftReviewCarousel({
@@ -23,6 +25,8 @@ export function DraftReviewCarousel({
   saveError,
   currentIndex,
   onIndexChange,
+  aiModel,
+  aiResponseTimeMs,
 }: DraftReviewCarouselProps): ReactElement {
   const { t, i18n } = useTranslation(['ai-generation'])
   const [selectedPhotoIndexes, setSelectedPhotoIndexes] = useState<Record<string, number>>({})
@@ -55,6 +59,7 @@ export function DraftReviewCarousel({
 
   const dateLabel = formatDateRange(draft.startDate, draft.endDate, i18n.language)
   const preview = draft.activities.slice(0, 4)
+  const hasBlocks = draft.days?.some((day: DraftDay) => day.blocks && day.blocks.length > 0) ?? false
   const legacyCoverPhoto = (draft as DraftItinerary & { coverPhoto?: { url: string; caption?: string | null } | null }).coverPhoto
   const photoOptions = draft.coverPhotoOptions ?? []
   const photoSelectionKey = `${generationRequestId}:${draft._id}`
@@ -141,6 +146,41 @@ export function DraftReviewCarousel({
           </div>
         ) : null}
 
+        {hasBlocks && draft.days ? (
+          <div className="draft-carousel__day-plan">
+            <p className="draft-carousel__section-label">
+              {t('ai-generation:carousel.dayPlan')}
+            </p>
+            {draft.days.map((day, dayIndex) => (
+              <details key={day.date} className="draft-carousel__day-block">
+                <summary>
+                  {t('ai-generation:carousel.dayLabel', { n: dayIndex + 1 })} — {new Date(day.date + 'T00:00:00').toLocaleDateString(i18n.language, { weekday: 'short', month: 'short', day: 'numeric' })}
+                </summary>
+                {day.blocks && day.blocks.length > 0 ? (
+                  <div className="draft-carousel__blocks">
+                    {day.blocks.map((block, blockIndex) => (
+                      <div key={`${block.label}-${blockIndex}`} className="draft-carousel__block">
+                        <span className="draft-carousel__block-label">{block.label}</span>
+                        <ul>
+                          {block.activities.map((activity, actIndex) => (
+                            <li key={`${activity}-${actIndex}`}>{activity}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <ul>
+                    {day.activities.map((activity, actIndex) => (
+                      <li key={`${activity}-${actIndex}`}>{activity}</li>
+                    ))}
+                  </ul>
+                )}
+              </details>
+            ))}
+          </div>
+        ) : null}
+
         {draft.tags.length > 0 ? (
           <div className="draft-carousel__tags" aria-label={t('ai-generation:carousel.tags')}>
             {draft.tags.map((tag) => (
@@ -149,6 +189,15 @@ export function DraftReviewCarousel({
               </span>
             ))}
           </div>
+        ) : null}
+
+        {aiModel || aiResponseTimeMs ? (
+          <p className="draft-carousel__footnote">
+            {t('ai-generation:carousel.generationFootnote', {
+              model: aiModel ?? t('ai-generation:carousel.unknownModel'),
+              seconds: aiResponseTimeMs != null ? (aiResponseTimeMs / 1000).toFixed(1) : '?',
+            })}
+          </p>
         ) : null}
 
         {saveError ? (

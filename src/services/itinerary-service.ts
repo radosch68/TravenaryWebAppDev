@@ -5,6 +5,7 @@ import type {
   ItineraryListResponse,
   ShareTokenResponse,
   SharedItineraryDetail,
+  UpdateItineraryRequest,
 } from '@/services/contracts'
 
 function toQuery(params: ItineraryListParams = {}): string {
@@ -68,7 +69,7 @@ export async function deleteItinerary(itineraryId: string): Promise<void> {
 
 export async function updateItinerary(
   itineraryId: string,
-  data: Record<string, unknown>,
+  data: UpdateItineraryRequest,
 ): Promise<ItineraryDetail> {
   return apiRequest<ItineraryDetail>(`/itineraries/${itineraryId}`, {
     method: 'PATCH',

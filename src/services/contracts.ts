@@ -58,14 +58,21 @@ export interface WebReference {
   type?: 'photo' | 'video' | 'webpage'
 }
 
+export type ActivityType = 'note' | 'flight' | 'accommodation' | 'transfer' | 'poi' | 'carRental' | 'custom' | 'divider'
+
 export interface ItineraryActivity {
   id: string
-  type: 'note' | 'flight' | 'accommodation' | 'transfer' | 'poi' | 'carRental' | 'custom'
+  type: ActivityType
   subType?: 'start' | 'end'
   title: string
   text?: string
   time?: string
   timeEnd?: string
+  isAnchored: boolean
+}
+
+export type ItineraryActivityInput = Omit<ItineraryActivity, 'isAnchored'> & {
+  isAnchored?: boolean
 }
 
 export interface ItineraryDay {
@@ -73,6 +80,12 @@ export interface ItineraryDay {
   date?: string
   summary?: string
   activities: ItineraryActivity[]
+}
+
+export interface ItineraryDayInput {
+  dayNumber: number
+  summary?: string
+  activities: ItineraryActivityInput[]
 }
 
 export interface ItinerarySummary {
@@ -125,4 +138,14 @@ export interface ItineraryListParams {
   limit?: number
   sortBy?: 'plannedStartDate'
   sortOrder?: 'asc'
+}
+
+export interface UpdateItineraryRequest {
+  title?: string
+  description?: string
+  tags?: string[]
+  visibility?: 'private' | 'shared' | 'public'
+  coverPhoto?: WebReference | null
+  startDate?: string | null
+  days?: ItineraryDayInput[]
 }
