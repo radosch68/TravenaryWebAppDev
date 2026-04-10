@@ -122,9 +122,12 @@ export function sortActivitiesForTimeline(activities: ItineraryActivity[]): Itin
  */
 export function flattenSectionsToActivities(sections: PlanningSection[]): ItineraryActivity[] {
   const result: ItineraryActivity[] = []
+  let prevWasFlexible = false
+
   for (const section of sections) {
     if (section.type === 'anchored') {
       result.push(...section.activities)
+      prevWasFlexible = false
     } else {
       if (section.dividerId !== undefined || section.dividerLabel !== undefined) {
         result.push({
@@ -133,8 +136,17 @@ export function flattenSectionsToActivities(sections: PlanningSection[]): Itiner
           title: section.dividerLabel ?? '',
           isAnchored: false,
         })
+      } else if (prevWasFlexible) {
+        // Insert empty divider to preserve block boundary
+        result.push({
+          id: crypto.randomUUID(),
+          type: 'divider',
+          title: '',
+          isAnchored: false,
+        })
       }
       result.push(...section.activities)
+      prevWasFlexible = true
     }
   }
   return result

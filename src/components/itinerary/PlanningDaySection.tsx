@@ -3,8 +3,12 @@ import type { ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useDraggable, useDroppable } from '@dnd-kit/core'
 
+import { Star } from '@phosphor-icons/react'
+
 import type { ItineraryActivity, ItineraryDay } from '@/services/contracts'
 import { groupActivitiesForPlanning } from '@/utils/activity-classification'
+import { formatLocalTimeRange } from '@/utils/date-format'
+import { ACTIVITY_TYPE_ICON, ACTIVITY_TYPE_COLOR } from './activity-presentation'
 import { AnchoredStatusToggle } from './AnchoredStatusToggle'
 
 interface PlanningDaySectionProps {
@@ -159,18 +163,29 @@ interface PlanningActivityRowProps {
 }
 
 function PlanningActivityRow({ activity, onToggleAnchored, disabled }: PlanningActivityRowProps): ReactElement {
+  const { i18n } = useTranslation(['common'])
+  const typeColor = ACTIVITY_TYPE_COLOR[activity.type] ?? ACTIVITY_TYPE_COLOR.note
+
   return (
-    <li className="planning-activity">
+    <li
+      className="planning-activity"
+      style={{
+        background: typeColor.bg,
+        border: `2px solid ${typeColor.icon}50`,
+      }}
+    >
       <AnchoredStatusToggle
         isAnchored={activity.isAnchored}
         onToggle={(v) => onToggleAnchored(activity.id, v)}
         disabled={disabled}
       />
-      <span className="planning-activity__type">{activity.type}</span>
+      <span className="planning-activity__type-icon" style={{ color: typeColor.icon }}>
+        {ACTIVITY_TYPE_ICON[activity.type] ?? <Star size={16} />}
+      </span>
       <span className="planning-activity__title">{activity.title}</span>
       {activity.time ? (
         <span className="planning-activity__time">
-          {activity.time}{activity.timeEnd ? ` – ${activity.timeEnd}` : ''}
+          {formatLocalTimeRange(activity.time, activity.timeEnd, i18n.language)}
         </span>
       ) : null}
     </li>

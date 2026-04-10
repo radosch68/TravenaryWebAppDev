@@ -1,6 +1,6 @@
 import type { ReactElement } from 'react'
 import { useCallback } from 'react'
-import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
   DndContext,
@@ -101,6 +101,7 @@ export function ItineraryPlanningView({ itinerary, onReorder, onToggleAnchored, 
 
   return (
     <div className="planning-view">
+      <p className="planning-view__hint">{t('common:itinerary.dayEditor.editDayHint')}</p>
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
@@ -137,27 +138,48 @@ interface DayRowProps {
 
 function DayRow({ day, index, itineraryId, totalDays, onToggleAnchored }: DayRowProps): ReactElement {
   const { t, i18n } = useTranslation(['common'])
+  const navigate = useNavigate()
+
+  const handleClick = useCallback((e: React.MouseEvent<HTMLLIElement>) => {
+    // Let interactive children (buttons, drag handles) handle their own clicks
+    const target = e.target as HTMLElement
+    if (target.closest('button, [data-dnd-handle], .planning-section__grip')) return
+    navigate(`/itineraries/${itineraryId}/days/${day.dayNumber}`)
+  }, [navigate, itineraryId, day.dayNumber])
 
   return (
-    <li className={`itinerary-day-list__item itinerary-day-list__item--${index % 2 === 0 ? 'odd' : 'even'}`}>
-      <Link
-        to={`/itineraries/${itineraryId}/days/${day.dayNumber}`}
-        className="itinerary-day-link"
-        style={{ display: 'block', color: 'inherit', cursor: 'pointer' }}
-      >
-        <div className="itinerary-day-header">
-          <span className="itinerary-day-header__weekday">
-            {day.date ? formatWeekday(day.date, i18n.language) : '—'}
-          </span>
-          <span className="itinerary-day-header__date" style={{ whiteSpace: 'nowrap' }}>
-            {day.date ? formatLocalDate(day.date, i18n.language) : t('common:itinerary.missingDate')}
-          </span>
-          <span className="itinerary-day-header__index">
-            {t('common:itinerary.dayNumber', { dayNumber: day.dayNumber })}
-          </span>
-        </div>
-        {day.summary ? <p className="itinerary-day-summary">{day.summary}</p> : null}
-      </Link>
+    <li
+      className={`itinerary-day-list__item itinerary-day-list__item--${index % 2 === 0 ? 'odd' : 'even'}`}
+      onClick={handleClick}
+      style={{ cursor: 'pointer' }}
+      role="link"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') {
+          return
+        }
+
+        const target = e.target as HTMLElement
+        if (target.closest('button, [data-dnd-handle], .planning-section__grip')) {
+          return
+        }
+
+        e.preventDefault()
+        navigate(`/itineraries/${itineraryId}/days/${day.dayNumber}`)
+      }}
+    >
+      <div className="itinerary-day-header">
+        <span className="itinerary-day-header__weekday">
+          {day.date ? formatWeekday(day.date, i18n.language) : '—'}
+        </span>
+        <span className="itinerary-day-header__date" style={{ whiteSpace: 'nowrap' }}>
+          {day.date ? formatLocalDate(day.date, i18n.language) : t('common:itinerary.missingDate')}
+        </span>
+        <span className="itinerary-day-header__index">
+          {t('common:itinerary.dayNumber', { dayNumber: day.dayNumber })}
+        </span>
+      </div>
+      {day.summary ? <p className="itinerary-day-summary">{day.summary}</p> : null}
 
       <PlanningDaySection
         day={day}

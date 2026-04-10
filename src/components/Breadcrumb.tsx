@@ -7,6 +7,7 @@ export interface BreadcrumbItem {
   icon?: 'home'
   ariaLabel?: string
   to?: string
+  onClick?: () => void
 }
 
 interface BreadcrumbProps {
@@ -51,6 +52,15 @@ export function Breadcrumb({ items }: BreadcrumbProps): ReactElement | null {
               >
                 {item.icon ? <BreadcrumbIcon icon={item.icon} /> : item.label}
               </Link>
+            ) : item.onClick ? (
+              <button
+                type="button"
+                className="breadcrumb__link breadcrumb__link--button"
+                onClick={item.onClick}
+                aria-label={item.ariaLabel}
+              >
+                {item.icon ? <BreadcrumbIcon icon={item.icon} /> : item.label}
+              </button>
             ) : (
               <span
                 className={item.icon ? 'breadcrumb__text breadcrumb__text--icon' : 'breadcrumb__text'}

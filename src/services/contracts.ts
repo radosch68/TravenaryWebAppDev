@@ -58,7 +58,7 @@ export interface WebReference {
   type?: 'photo' | 'video' | 'webpage'
 }
 
-export type ActivityType = 'note' | 'flight' | 'accommodation' | 'transfer' | 'poi' | 'carRental' | 'custom' | 'divider'
+export type ActivityType = 'note' | 'flight' | 'accommodation' | 'transfer' | 'poi' | 'carRental' | 'custom' | 'food' | 'divider'
 
 export interface ItineraryActivity {
   id: string
@@ -68,6 +68,12 @@ export interface ItineraryActivity {
   text?: string
   time?: string
   timeEnd?: string
+  bookingRef?: string
+  serviceCode?: string
+  vendor?: string
+  airport?: string
+  activityGroupId?: string
+  pairedActivityId?: string
   isAnchored: boolean
 }
 

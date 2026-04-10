@@ -15,6 +15,7 @@ import type { ItineraryActivity, ItineraryActivityInput, ItineraryDay, UpdateIti
 import { formatLocalDate } from '@/utils/date-format'
 import { isAnchoredByDefault } from '@/utils/activity-classification'
 import { unsplashUrl } from '@/utils/unsplash-url'
+import { PencilSimple } from '@phosphor-icons/react'
 
 type PresentationMode = 'planning' | 'timeline'
 
@@ -217,7 +218,7 @@ export function ItineraryDetailPage(): ReactElement {
                   <p className="text-muted">{t('common:itinerary.edit.tags')}</p>
                 )}
                 <button type="button" className="edit-pencil" onClick={onEdit} aria-label={t('common:itinerary.edit.tags')}>
-                  <PencilIcon />
+                  <PencilSimple size={14} />
                 </button>
               </div>
             </div>
@@ -271,7 +272,7 @@ export function ItineraryDetailPage(): ReactElement {
             <div className="editable-display">
               <h1>{val}</h1>
               <button type="button" className="edit-pencil" onClick={onEdit} aria-label={t('common:itinerary.edit.titlePlaceholder')}>
-                <PencilIcon />
+                <PencilSimple size={14} />
               </button>
             </div>
           )}
@@ -305,7 +306,7 @@ export function ItineraryDetailPage(): ReactElement {
             <div className="editable-display">
               <p className="itinerary-detail-description">{val || <em className="text-muted">{t('common:itinerary.edit.descriptionPlaceholder')}</em>}</p>
               <button type="button" className="edit-pencil" onClick={onEdit} aria-label={t('common:itinerary.edit.descriptionPlaceholder')}>
-                <PencilIcon />
+                <PencilSimple size={14} />
               </button>
             </div>
           )}
@@ -340,7 +341,7 @@ export function ItineraryDetailPage(): ReactElement {
                 <span className="editable-display editable-display--inline">
                   <span>{val ? formatLocalDate(val, i18n.language) : t('common:itinerary.missingDate')}</span>
                   <button type="button" className="edit-pencil" onClick={onEdit} aria-label={t('common:itinerary.edit.startDate')}>
-                    <PencilIcon />
+                    <PencilSimple size={14} />
                   </button>
                 </span>
               )}
@@ -392,7 +393,7 @@ export function ItineraryDetailPage(): ReactElement {
                 <span className="editable-display editable-display--inline">
                   <span>{val ? formatLocalDate(val, i18n.language) : t('common:itinerary.missingDate')}</span>
                   <button type="button" className="edit-pencil" onClick={onEdit} aria-label={t('common:itinerary.edit.endDate')}>
-                    <PencilIcon />
+                    <PencilSimple size={14} />
                   </button>
                 </span>
               )}
@@ -644,7 +645,7 @@ function CoverPhotoSection({ coverPhoto, title, onSave }: CoverPhotoSectionProps
         title={coverPhoto.caption ?? title}
       />
       <button type="button" className="cover-edit-trigger edit-pencil" onClick={() => setEditing(true)} aria-label={t('common:itinerary.edit.coverPhoto')}>
-        <PencilIcon />
+        <PencilSimple size={14} />
       </button>
       {coverPhoto.caption ? (
         <p className="itinerary-detail-cover__caption">{coverPhoto.caption}</p>
@@ -690,7 +691,7 @@ function CoverPhotoPlaceholder({ onSave }: { onSave: (url: string, caption: stri
   if (!editing) {
     return (
       <button type="button" className="cover-add-placeholder" onClick={() => setEditing(true)}>
-        <PencilIcon /> {t('common:itinerary.edit.coverPhoto')}
+        <PencilSimple size={14} /> {t('common:itinerary.edit.coverPhoto')}
       </button>
     )
   }
@@ -713,10 +714,3 @@ function CoverPhotoPlaceholder({ onSave }: { onSave: (url: string, caption: stri
   )
 }
 
-function PencilIcon(): ReactElement {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M17 3a2.83 2.83 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
-    </svg>
-  )
-}
