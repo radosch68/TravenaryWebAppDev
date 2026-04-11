@@ -2340,9 +2340,12 @@ button:disabled {
 /* ---- Activity editor row ---- */
 
 .activity-editor-row {
-  display: flex;
-  align-items: stretch;
-  gap: 0.4rem;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
+  column-gap: 0.4rem;
+  row-gap: 0.15rem;
+  align-items: start;
   padding: 0.3rem 0.2rem;
   border-radius: 6px;
   transition: background 0.12s ease;
@@ -2367,6 +2370,8 @@ button:disabled {
   gap: 0.2rem;
   flex-shrink: 0;
   padding-top: 0.1rem;
+  grid-column: 1;
+  grid-row: 1 / span 2;
 }
 
 .activity-editor-row__drag-handle {
@@ -2402,17 +2407,19 @@ button:disabled {
   opacity: 0.4;
 }
 
-.activity-editor-row__content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
+.activity-editor-row__header {
+  grid-column: 2 / span 2;
+  grid-row: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  column-gap: 0.4rem;
   min-width: 0;
   cursor: pointer;
-  padding: 0.15rem 0;
+  padding-top: 0.15rem;
 }
 
-.activity-editor-row__content:focus-visible {
+.activity-editor-row__header:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
   border-radius: 4px;
@@ -2423,6 +2430,15 @@ button:disabled {
   font-weight: 600;
   white-space: normal;
   overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+.activity-editor-row__description-wrap {
+  grid-column: 2;
+  grid-row: 2;
+  min-width: 0;
+  cursor: pointer;
+  padding-bottom: 0.15rem;
 }
 
 .activity-editor-row__description {
@@ -2433,18 +2449,24 @@ button:disabled {
 }
 
 .activity-editor-row__right {
+  grid-column: 3;
+  grid-row: 2;
   display: flex;
-  flex-direction: column;
   align-items: flex-end;
-  justify-content: space-between;
+  justify-content: flex-end;
   flex-shrink: 0;
-  padding-top: 0.1rem;
+  padding-bottom: 0.15rem;
 }
 
 .activity-editor-row__time {
+  grid-column: 2;
+  grid-row: 1;
   font-size: 0.78rem;
   color: var(--text-muted);
   white-space: nowrap;
+  text-align: right;
+  justify-self: end;
+  align-self: start;
 }
 
 .activity-editor-row__delete-btn {

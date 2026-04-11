@@ -28,6 +28,18 @@ export function ActivityEditorRow({
 }: ActivityEditorRowProps): ReactElement {
   const { t, i18n } = useTranslation(['common'])
 
+  const handleEditKeyDown = (e: React.KeyboardEvent<HTMLDivElement>): void => {
+    if (e.key === 'Enter') {
+      onEdit()
+      return
+    }
+
+    if (e.key === ' ') {
+      e.preventDefault()
+      onEdit()
+    }
+  }
+
   const { setNodeRef, transform, isDragging, listeners, attributes } = useDraggable({
     id: `activity-${activity.id}`,
     data: { activityId: activity.id, sourceBlockKey: blockKey },
@@ -63,34 +75,30 @@ export function ActivityEditorRow({
       </div>
 
       <div
-        className="activity-editor-row__content"
+        className="activity-editor-row__header"
         role="button"
         tabIndex={0}
         onClick={onEdit}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            onEdit()
-            return
-          }
-
-          if (e.key === ' ') {
-            e.preventDefault()
-            onEdit()
-          }
-        }}
+        onKeyDown={handleEditKeyDown}
       >
         <span className="activity-editor-row__title">{activity.title}</span>
+        {activity.time && (
+          <span className="activity-editor-row__time">
+            {formatLocalTimeRange(activity.time, activity.timeEnd, i18n.language)}
+          </span>
+        )}
+      </div>
+
+      <div
+        className="activity-editor-row__description-wrap"
+        onClick={onEdit}
+      >
         {activity.text ? (
           <span className="activity-editor-row__description">{activity.text}</span>
         ) : null}
       </div>
 
       <div className="activity-editor-row__right">
-        {activity.time && (
-          <span className="activity-editor-row__time">
-            {formatLocalTimeRange(activity.time, activity.timeEnd, i18n.language)}
-          </span>
-        )}
         <button
           type="button"
           className="activity-editor-row__delete-btn"
