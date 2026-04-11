@@ -2569,6 +2569,7 @@ button:disabled {
 
 .activity-form-panel__field-row > .activity-form-panel__field {
   flex: 1;
+  min-width: 0;
 }
 
 .activity-form-panel__type-grid {
@@ -2775,6 +2776,15 @@ button:disabled {
     gap: 0.65rem;
   }
 
+  .activity-form-panel__field-row--time {
+    flex-direction: row;
+    gap: 0.55rem;
+  }
+
+  .activity-form-panel__field-row--time > .activity-form-panel__field {
+    min-width: 0;
+  }
+
   .activity-form-panel__actions {
     position: sticky;
     bottom: 0;
@@ -2837,6 +2847,10 @@ button:disabled {
   .activity-form-panel__field-row {
     flex-direction: column;
     gap: var(--space-1);
+  }
+
+  .activity-form-panel__field-row--time {
+    flex-direction: row;
   }
 
   .day-editor-shell__actions {

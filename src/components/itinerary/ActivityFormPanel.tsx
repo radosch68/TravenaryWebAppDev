@@ -71,13 +71,18 @@ export function ActivityFormPanel({
   const isCreate = mode === 'create'
   const isFullEdit = isCreate || (activity ? FULL_EDIT_TYPES.has(activity.type) : false)
   const timePlaceholder = getLocalizedTimeInputPlaceholder(i18n.language)
-  const timeInputMode: 'text' | 'numeric' = i18n.language.startsWith('en') ? 'text' : 'numeric'
+  const useNativeTimeInput = typeof window !== 'undefined'
+    && window.matchMedia('(hover: none), (pointer: coarse)').matches
+  const timeInputMode: 'text' | 'numeric' = useNativeTimeInput
+    ? 'numeric'
+    : i18n.language.startsWith('en') ? 'text' : 'numeric'
+  const timeInputType = useNativeTimeInput ? 'time' : 'text'
 
   const [type, setType] = useState<ActivityType>(activity?.type ?? 'note')
   const [title, setTitle] = useState(activity?.title ?? '')
   const [text, setText] = useState(activity?.text ?? '')
-  const [time, setTime] = useState(() => formatLocalTime(activity?.time, i18n.language))
-  const [timeEnd, setTimeEnd] = useState(() => formatLocalTime(activity?.timeEnd, i18n.language))
+  const [time, setTime] = useState(() => useNativeTimeInput ? (activity?.time ?? '') : formatLocalTime(activity?.time, i18n.language))
+  const [timeEnd, setTimeEnd] = useState(() => useNativeTimeInput ? (activity?.timeEnd ?? '') : formatLocalTime(activity?.timeEnd, i18n.language))
   const [vendor, setVendor] = useState(activity?.vendor ?? '')
   const [bookingRef, setBookingRef] = useState(activity?.bookingRef ?? '')
   const [serviceCode, setServiceCode] = useState(activity?.serviceCode ?? '')
@@ -252,19 +257,20 @@ export function ActivityFormPanel({
         </div>
       )}
 
-      <div className="activity-form-panel__field-row">
+      <div className="activity-form-panel__field-row activity-form-panel__field-row--time">
         <div className="activity-form-panel__field">
           <label htmlFor="activity-time">{t('common:itinerary.dayEditor.fieldTime')}</label>
           <input
             id="activity-time"
             ref={timeInputRef}
-            type="text"
+            type={timeInputType}
             value={time}
             onChange={(e) => handleTimeInput(e.target.value)}
             inputMode={timeInputMode}
-            placeholder={timePlaceholder}
+            placeholder={useNativeTimeInput ? undefined : timePlaceholder}
             autoComplete="off"
             disabled={disabled}
+            step={useNativeTimeInput ? 60 : undefined}
           />
         </div>
         <div className="activity-form-panel__field">
@@ -272,13 +278,14 @@ export function ActivityFormPanel({
           <input
             id="activity-time-end"
             ref={timeEndInputRef}
-            type="text"
+            type={timeInputType}
             value={timeEnd}
             onChange={(e) => handleTimeEndInput(e.target.value)}
             inputMode={timeInputMode}
-            placeholder={timePlaceholder}
+            placeholder={useNativeTimeInput ? undefined : timePlaceholder}
             autoComplete="off"
             disabled={disabled}
+            step={useNativeTimeInput ? 60 : undefined}
           />
         </div>
       </div>
