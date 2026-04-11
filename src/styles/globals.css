@@ -29,6 +29,16 @@ body {
   color: var(--text-main);
 }
 
+body[data-preview-width] {
+  overflow-x: auto;
+}
+
+#root[data-preview-width] {
+  width: min(100%, var(--desktop-preview-width));
+  min-height: 100vh;
+  margin: 0 auto;
+}
+
 a {
   color: var(--accent-strong);
   text-decoration: none;

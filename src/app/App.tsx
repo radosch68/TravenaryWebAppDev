@@ -25,6 +25,38 @@ export default function App(): ReactElement {
     void restoreSessionFromStorage()
   }, [restoreSessionFromStorage])
 
+  useEffect(() => {
+    const root = document.getElementById('root')
+    const searchParams = new URLSearchParams(window.location.search)
+    const previewMode = searchParams.get('preview')
+    const previewWidthParam = searchParams.get('previewWidth')
+
+    let previewWidth: string | null = null
+
+    if (previewMode === 'iphone') {
+      previewWidth = '390px'
+    } else if (previewMode === 'iphone-plus') {
+      previewWidth = '430px'
+    } else if (previewWidthParam && /^\d{3,4}$/.test(previewWidthParam)) {
+      previewWidth = `${previewWidthParam}px`
+    }
+
+    if (previewWidth) {
+      document.body.dataset.previewWidth = previewWidth
+      root?.setAttribute('data-preview-width', previewWidth)
+      root?.style.setProperty('--desktop-preview-width', previewWidth)
+      return () => {
+        delete document.body.dataset.previewWidth
+        root?.removeAttribute('data-preview-width')
+        root?.style.removeProperty('--desktop-preview-width')
+      }
+    }
+
+    delete document.body.dataset.previewWidth
+    root?.removeAttribute('data-preview-width')
+    root?.style.removeProperty('--desktop-preview-width')
+  }, [])
+
   return (
     <BrowserRouter basename={import.meta.env.BASE_URL}>
       <Routes>
