@@ -115,6 +115,13 @@
       "moveUp": "Move up",
       "moveDown": "Move down",
       "activityType": "Type",
+      "activityTypeOptions": {
+        "note": "Note",
+        "poi": "Point of interest",
+        "custom": "Custom",
+        "carRental": "Car rental",
+        "food": "Food"
+      },
       "fieldTitle": "Title",
       "fieldText": "Description",
       "fieldTime": "Start time",

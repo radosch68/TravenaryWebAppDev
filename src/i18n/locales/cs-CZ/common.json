@@ -118,6 +118,13 @@
       "moveUp": "Posunout výše",
       "moveDown": "Posunout níže",
       "activityType": "Typ",
+      "activityTypeOptions": {
+        "note": "Poznámka",
+        "poi": "Místo zájmu",
+        "custom": "Vlastní",
+        "carRental": "Pronájem auta",
+        "food": "Jídlo"
+      },
       "fieldTitle": "Název",
       "fieldText": "Popis",
       "fieldTime": "Čas začátku",

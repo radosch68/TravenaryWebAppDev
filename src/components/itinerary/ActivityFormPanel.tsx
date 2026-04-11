@@ -4,10 +4,20 @@ import { useTranslation } from 'react-i18next'
 
 import type { ActivityType, ItineraryActivity } from '@/services/contracts'
 import { formatLocalTime, getLocalizedTimeInputPlaceholder } from '@/utils/date-format'
+import { ACTIVITY_TYPE_COLOR, ACTIVITY_TYPE_ICON } from './activity-presentation'
 
 const FULL_EDIT_TYPES: ReadonlySet<ActivityType> = new Set(['note', 'poi', 'custom', 'carRental', 'food'])
 const LIMITED_EDIT_FIELDS = ['title', 'text', 'time', 'timeEnd', 'vendor', 'bookingRef', 'serviceCode', 'airport'] as const
-const CREATABLE_TYPES: ActivityType[] = ['note', 'poi', 'custom', 'carRental', 'food']
+const CREATABLE_TYPES = ['note', 'poi', 'carRental', 'food', 'custom'] as const satisfies readonly ActivityType[]
+type CreatableActivityType = (typeof CREATABLE_TYPES)[number]
+
+const ACTIVITY_TYPE_LABEL_KEY: Record<CreatableActivityType, string> = {
+  note: 'note',
+  poi: 'poi',
+  custom: 'custom',
+  carRental: 'carRental',
+  food: 'food',
+}
 
 function normalizeTimeValue(value: string): string | undefined {
   const trimmed = value.trim()
@@ -144,17 +154,46 @@ export function ActivityFormPanel({
 
       {isCreate && (
         <div className="activity-form-panel__field">
-          <label htmlFor="activity-type">{t('common:itinerary.dayEditor.activityType')}</label>
-          <select
-            id="activity-type"
-            value={type}
-            onChange={(e) => setType(e.target.value as ActivityType)}
-            disabled={disabled}
-          >
-            {CREATABLE_TYPES.map((t) => (
-              <option key={t} value={t}>{t}</option>
-            ))}
-          </select>
+          <div className="activity-form-panel__type-grid" role="radiogroup" aria-label={t('common:itinerary.dayEditor.activityType')}>
+            {CREATABLE_TYPES.map((activityType) => {
+              const typeColor = ACTIVITY_TYPE_COLOR[activityType] ?? ACTIVITY_TYPE_COLOR.note
+              const isSelected = type === activityType
+
+              return (
+                <button
+                  key={activityType}
+                  type="button"
+                  className={`activity-form-panel__type-option${isSelected ? ' activity-form-panel__type-option--selected' : ''}`}
+                  style={{
+                    background: typeColor.bg,
+                    border: `2px solid ${typeColor.icon}50`,
+                    color: typeColor.icon,
+                  }}
+                  onClick={() => setType(activityType)}
+                  disabled={disabled}
+                  role="radio"
+                  aria-checked={isSelected}
+                  aria-label={t(`common:itinerary.dayEditor.activityTypeOptions.${ACTIVITY_TYPE_LABEL_KEY[activityType]}`)}
+                >
+                  {isSelected ? (
+                    <span
+                      className="activity-form-panel__type-option-check"
+                      aria-hidden="true"
+                      style={{ backgroundColor: typeColor.icon }}
+                    >
+                      ✓
+                    </span>
+                  ) : null}
+                  <span className="activity-form-panel__type-option-icon" aria-hidden="true">
+                    {ACTIVITY_TYPE_ICON[activityType]}
+                  </span>
+                  <span className="activity-form-panel__type-option-label">
+                    {t(`common:itinerary.dayEditor.activityTypeOptions.${ACTIVITY_TYPE_LABEL_KEY[activityType]}`)}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
         </div>
       )}
 
