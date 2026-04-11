@@ -1997,6 +1997,7 @@ button:disabled {
   padding: 0.3rem 0.5rem;
   font-size: 0.88rem;
   border-radius: 6px;
+  min-width: 0;
 }
 
 .planning-activity__type-icon {
@@ -2007,6 +2008,8 @@ button:disabled {
 
 .planning-activity__title {
   flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .planning-activity__time {
@@ -2067,6 +2070,7 @@ button:disabled {
   padding: 0.3rem 0.5rem;
   font-size: 0.88rem;
   border-radius: 6px;
+  min-width: 0;
 }
 
 .timeline-activity__time {
@@ -2084,6 +2088,8 @@ button:disabled {
 
 .timeline-activity__title {
   flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .timeline-activity__anchored-marker {
