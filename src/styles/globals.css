@@ -2998,8 +2998,7 @@ button:disabled {
   }
 
   .app-shell > .panel {
-    padding-left: max(var(--space-4), env(safe-area-inset-left));
-    padding-right: max(var(--space-4), env(safe-area-inset-right));
+    padding: var(--space-3) max(var(--space-3), env(safe-area-inset-right)) var(--space-3) max(var(--space-3), env(safe-area-inset-left));
   }
 
   .dashboard-content-padding,
@@ -3015,6 +3014,17 @@ button:disabled {
 
   .planning-activity {
     gap: 0.35rem;
+  }
+
+  /* Day list: match panel mobile padding so content aligns */
+  .itinerary-day-list {
+    margin-left: calc(-1 * var(--space-3));
+    margin-right: calc(-1 * var(--space-3));
+  }
+
+  .itinerary-day-list__item {
+    padding-left: max(var(--space-3), env(safe-area-inset-left));
+    padding-right: max(var(--space-3), env(safe-area-inset-right));
   }
 
   .anchored-toggle__label {
