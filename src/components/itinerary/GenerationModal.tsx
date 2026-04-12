@@ -2,6 +2,7 @@ import type { ReactElement } from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
+import { ArrowCounterClockwise, X } from '@phosphor-icons/react'
 import { DashboardPaginationBar } from '@/components/DashboardPaginationBar'
 import { DraftReviewCarousel } from '@/components/itinerary/DraftReviewCarousel'
 import type { DraftItinerary, ModelInfo, OutputDepth } from '@/services/ai-generation.service'
@@ -14,8 +15,21 @@ import {
   POLL_INTERVAL_MS,
 } from '@/services/ai-generation.service'
 import { ApiError } from '@/services/contracts'
+import type {
+  LanguageMode,
+  CuratedLanguageCode,
+  TimingValue,
+  TravelerProfileValue,
+  BudgetProfileValue,
+  GenerationContextOptions,
+} from '@/services/contracts'
 
 const DEPTH_VALUES: OutputDepth[] = ['fast', 'balanced', 'detailed']
+
+const CURATED_LANGUAGE_CODES: CuratedLanguageCode[] = ['en', 'cs-CZ', 'de', 'fr', 'es', 'it', 'pt-BR']
+const TIMING_VALUES: TimingValue[] = ['thisWeekend', 'nextWeek', 'nextMonth', 'summerHoliday', 'winterHoliday', 'customDates', 'flexible', 'other']
+const TRAVELER_VALUES: TravelerProfileValue[] = ['solo', 'couple', 'familyWithKids', 'friendsGroup', 'business', 'other']
+const BUDGET_VALUES: BudgetProfileValue[] = ['budget', 'midRange', 'premium', 'luxury', 'other']
 
 type ModalStep =
   | 'input'
@@ -42,6 +56,113 @@ const DEV_PROMPT_PRESET_IDS = [
   'australiaCoastAndNature',
 ] as const
 
+const SETTINGS_KEY = 'travenary_generation_settings'
+const LAST_REQUEST_ID_KEY = 'travenary_last_generation_request_id'
+
+interface LastGenerationRequestMeta {
+  requestId: string
+  savedAtEpochMs: number | null
+}
+
+interface SavedSettings {
+  prompt: string
+  selectedModel: string
+  selectedDraftCount: number
+  selectedOutputDepth: OutputDepth
+  languageMode: LanguageMode
+  languageCode: CuratedLanguageCode
+  languageOther: string
+  departureFrom: string
+  timing: TimingValue | ''
+  timingOther: string
+  timingDateFrom: string
+  timingDateTo: string
+  travelerProfile: TravelerProfileValue | ''
+  travelerProfileOther: string
+  budgetProfile: BudgetProfileValue | ''
+  budgetProfileOther: string
+}
+
+const DEFAULT_SETTINGS: Omit<SavedSettings, 'selectedModel'> = {
+  prompt: '',
+  selectedDraftCount: 2,
+  selectedOutputDepth: 'balanced',
+  languageMode: 'auto',
+  languageCode: 'en',
+  languageOther: '',
+  departureFrom: '',
+  timing: '',
+  timingOther: '',
+  timingDateFrom: '',
+  timingDateTo: '',
+  travelerProfile: '',
+  travelerProfileOther: '',
+  budgetProfile: '',
+  budgetProfileOther: '',
+}
+
+function loadSavedSettings(): SavedSettings | null {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY)
+    if (!raw) return null
+    return JSON.parse(raw) as SavedSettings
+  } catch {
+    return null
+  }
+}
+
+function saveSettings(settings: SavedSettings): void {
+  try {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings))
+  } catch { /* quota exceeded — ignore */ }
+}
+
+function clearSavedSettings(): void {
+  localStorage.removeItem(SETTINGS_KEY)
+}
+
+function loadLastGenerationRequestMeta(): LastGenerationRequestMeta | null {
+  try {
+    const raw = localStorage.getItem(LAST_REQUEST_ID_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as unknown
+    if (typeof parsed === 'string') {
+      return { requestId: parsed, savedAtEpochMs: null }
+    }
+    if (
+      typeof parsed === 'object'
+      && parsed !== null
+      && 'requestId' in parsed
+      && typeof (parsed as { requestId?: unknown }).requestId === 'string'
+    ) {
+      const maybeSavedAt = (parsed as { savedAtEpochMs?: unknown }).savedAtEpochMs
+      return {
+        requestId: (parsed as { requestId: string }).requestId,
+        savedAtEpochMs: typeof maybeSavedAt === 'number' ? maybeSavedAt : null,
+      }
+    }
+    return { requestId: raw, savedAtEpochMs: null }
+  } catch {
+    try {
+      const fallbackRaw = localStorage.getItem(LAST_REQUEST_ID_KEY)
+      if (!fallbackRaw) return null
+      return { requestId: fallbackRaw, savedAtEpochMs: null }
+    } catch {
+      return null
+    }
+  }
+}
+
+function saveLastGenerationRequestMeta(requestId: string, savedAtEpochMs: number = Date.now()): void {
+  try {
+    localStorage.setItem(LAST_REQUEST_ID_KEY, JSON.stringify({ requestId, savedAtEpochMs }))
+  } catch { /* quota exceeded — ignore */ }
+}
+
+function clearLastGenerationRequestId(): void {
+  localStorage.removeItem(LAST_REQUEST_ID_KEY)
+}
+
 export function GenerationModal({ onClose, onFallback }: GenerationModalProps): ReactElement {
   const { t } = useTranslation(['ai-generation', 'common'])
   const navigate = useNavigate()
@@ -54,8 +175,25 @@ export function GenerationModal({ onClose, onFallback }: GenerationModalProps): 
   const [selectedDraftCount, setSelectedDraftCount] = useState<number>(2)
   const [selectedOutputDepth, setSelectedOutputDepth] = useState<OutputDepth>('balanced')
   const [showAdvanced, setShowAdvanced] = useState(false)
+  const [languageMode, setLanguageMode] = useState<LanguageMode>('auto')
+  const [languageCode, setLanguageCode] = useState<CuratedLanguageCode>('en')
+  const [languageOther, setLanguageOther] = useState('')
+  const [departureFrom, setDepartureFrom] = useState('')
+  const [locating, setLocating] = useState(false)
+  const [geoError, setGeoError] = useState<string | null>(null)
+  const [timing, setTiming] = useState<TimingValue | ''>('')
+  const [timingOther, setTimingOther] = useState('')
+  const [timingDateFrom, setTimingDateFrom] = useState('')
+  const [timingDateTo, setTimingDateTo] = useState('')
+  const [travelerProfile, setTravelerProfile] = useState<TravelerProfileValue | ''>('')
+  const [travelerProfileOther, setTravelerProfileOther] = useState('')
+  const [budgetProfile, setBudgetProfile] = useState<BudgetProfileValue | ''>('')
+  const [budgetProfileOther, setBudgetProfileOther] = useState('')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [generationRequestId, setGenerationRequestId] = useState<string | null>(null)
+  const [resumeRequestId, setResumeRequestId] = useState<string | null>(null)
+  const [resumeSavedAtEpochMs, setResumeSavedAtEpochMs] = useState<number | null>(null)
+  const [isResuming, setIsResuming] = useState(false)
   const [drafts, setDrafts] = useState<DraftItinerary[]>([])
   const [draftIndex, setDraftIndex] = useState(0)
   const [aiModel, setAiModel] = useState<string | undefined>()
@@ -81,8 +219,9 @@ export function GenerationModal({ onClose, onFallback }: GenerationModalProps): 
     abortRef.current = true
     abortControllerRef.current?.abort()
     clearTimers()
+    if (step === 'input') clearLastGenerationRequestId()
     onClose()
-  }, [onClose, clearTimers])
+  }, [onClose, clearTimers, step])
 
   const handlePollResult = useCallback((result: Awaited<ReturnType<typeof pollForDrafts>>): void => {
     if (!isMountedRef.current || abortRef.current) return
@@ -172,13 +311,110 @@ export function GenerationModal({ onClose, onFallback }: GenerationModalProps): 
     void executePoll(generationRequestId, abortControllerRef.current.signal)
   }, [generationRequestId, executePoll])
 
+  const handleResumeLatest = useCallback(async (): Promise<void> => {
+    if (!resumeRequestId) return
+
+    setErrorMessage(null)
+    setIsResuming(true)
+    setStep('loading')
+    setCountdown(0)
+    setPollCycleKey(0)
+    setIsPolling(false)
+    setDrafts([])
+    setDraftIndex(0)
+    setSaveError(null)
+    abortRef.current = false
+    abortControllerRef.current?.abort()
+    clearTimers()
+
+    const abortController = new AbortController()
+    abortControllerRef.current = abortController
+    deadlineRef.current = Date.now() + getTimeoutForModel(selectedModel)
+
+    try {
+      const result = await pollForDrafts(resumeRequestId, abortController.signal)
+
+      if (!isMountedRef.current || abortController.signal.aborted) {
+        return
+      }
+
+      setGenerationRequestId(resumeRequestId)
+
+      if (result.status === 'completed' && result.drafts && result.drafts.length > 0) {
+        setDrafts(result.drafts)
+        setDraftIndex(0)
+        setAiModel(result.aiModel)
+        setAiResponseTimeMs(result.aiResponseTimeMs)
+        setStep('review')
+        setIsPolling(false)
+      } else if (result.status === 'pending') {
+        schedulePollCycle(resumeRequestId, abortController.signal)
+      } else if (result.status === 'failed') {
+        setErrorMessage(result.errorMessage ?? t('ai-generation:modal.errorTitle'))
+        setStep('error')
+      } else {
+        setErrorMessage(t('ai-generation:modal.resumeNotAvailable'))
+        setStep('input')
+      }
+    } catch (err: unknown) {
+      if (err instanceof ApiError && err.code === 'REQUEST_ABORTED') {
+        return
+      }
+
+      if (!isMountedRef.current) {
+        return
+      }
+
+      if (err instanceof ApiError && err.status === 404) {
+        clearLastGenerationRequestId()
+        setResumeRequestId(null)
+        setResumeSavedAtEpochMs(null)
+        setErrorMessage(t('ai-generation:modal.resumeNotAvailable'))
+        setStep('input')
+      } else {
+        setErrorMessage(resolveErrorMessage(err, t))
+        setStep('error')
+      }
+    } finally {
+      if (isMountedRef.current) {
+        setIsResuming(false)
+      }
+    }
+  }, [clearTimers, resumeRequestId, schedulePollCycle, selectedModel, t])
+
   useEffect(() => {
     isMountedRef.current = true
+
+    const saved = loadSavedSettings()
+    const lastRequest = loadLastGenerationRequestMeta()
+    if (lastRequest) {
+      setResumeRequestId(lastRequest.requestId)
+      setResumeSavedAtEpochMs(lastRequest.savedAtEpochMs)
+    }
+    if (saved) {
+      setPrompt(saved.prompt)
+      setSelectedDraftCount(saved.selectedDraftCount)
+      setSelectedOutputDepth(saved.selectedOutputDepth)
+      setLanguageMode(saved.languageMode)
+      setLanguageCode(saved.languageCode)
+      setLanguageOther(saved.languageOther)
+      if (saved.departureFrom) setDepartureFrom(saved.departureFrom)
+      setTiming(saved.timing)
+      setTimingOther(saved.timingOther)
+      if (saved.timingDateFrom) setTimingDateFrom(saved.timingDateFrom)
+      if (saved.timingDateTo) setTimingDateTo(saved.timingDateTo)
+      setTravelerProfile(saved.travelerProfile)
+      setTravelerProfileOther(saved.travelerProfileOther)
+      setBudgetProfile(saved.budgetProfile)
+      setBudgetProfileOther(saved.budgetProfileOther)
+    }
 
     fetchAvailableModels().then((models) => {
       if (isMountedRef.current && models.length > 0) {
         setAvailableModels(models)
-        const defaultModel = models.find((m) => m.id === 'gpt-4o') ?? models[0]
+        const savedModel = saved?.selectedModel
+        const matchedModel = savedModel ? models.find((m) => m.id === savedModel) : undefined
+        const defaultModel = matchedModel ?? models.find((m) => m.id === 'gpt-4o') ?? models[0]
         setSelectedModel(defaultModel.id)
       }
     }).catch(() => { /* fallback: dropdown stays empty, generation uses server default */ })
@@ -213,6 +449,24 @@ export function GenerationModal({ onClose, onFallback }: GenerationModalProps): 
     }
 
     setErrorMessage(null)
+    saveSettings({
+      prompt: prompt.trim(),
+      selectedModel,
+      selectedDraftCount,
+      selectedOutputDepth,
+      languageMode,
+      languageCode,
+      languageOther,
+      departureFrom,
+      timing,
+      timingOther,
+      timingDateFrom,
+      timingDateTo,
+      travelerProfile,
+      travelerProfileOther,
+      budgetProfile,
+      budgetProfileOther,
+    })
     setStep('loading')
     setCountdown(0)
     setPollCycleKey(0)
@@ -231,12 +485,27 @@ export function GenerationModal({ onClose, onFallback }: GenerationModalProps): 
     deadlineRef.current = Date.now() + getTimeoutForModel(selectedModel)
 
     try {
+      const contextOptions: GenerationContextOptions = {
+        languageMode,
+        ...(languageMode === 'curated' ? { languageCode } : undefined),
+        ...(languageMode === 'other' && languageOther.trim() ? { languageOther: languageOther.trim() } : undefined),
+        ...(departureFrom.trim() ? { departureFrom: departureFrom.trim() } : undefined),
+        ...(timing ? { timing } : undefined),
+        ...(timing === 'other' && timingOther.trim() ? { timingOther: timingOther.trim() } : undefined),
+        ...(timing === 'customDates' && timingDateFrom ? { timingOther: timingDateTo ? `${timingDateFrom} to ${timingDateTo}` : timingDateFrom } : undefined),
+        ...(travelerProfile ? { travelerProfile } : undefined),
+        ...(travelerProfile === 'other' && travelerProfileOther.trim() ? { travelerProfileOther: travelerProfileOther.trim() } : undefined),
+        ...(budgetProfile ? { budgetProfile } : undefined),
+        ...(budgetProfile === 'other' && budgetProfileOther.trim() ? { budgetProfileOther: budgetProfileOther.trim() } : undefined),
+      }
+
       const { generationRequestId: reqId } = await startGeneration(
         prompt,
         selectedModel,
         abortController.signal,
         selectedDraftCount,
         selectedOutputDepth,
+        contextOptions,
       )
 
       if (!isMountedRef.current || abortController.signal.aborted) {
@@ -244,6 +513,10 @@ export function GenerationModal({ onClose, onFallback }: GenerationModalProps): 
       }
 
       setGenerationRequestId(reqId)
+      setResumeRequestId(reqId)
+      const savedAtEpochMs = Date.now()
+      setResumeSavedAtEpochMs(savedAtEpochMs)
+      saveLastGenerationRequestMeta(reqId, savedAtEpochMs)
 
       // First poll after 1 second, then every POLL_INTERVAL_MS
       pollTimerRef.current = window.setTimeout(() => {
@@ -280,6 +553,9 @@ export function GenerationModal({ onClose, onFallback }: GenerationModalProps): 
       if (!isMountedRef.current) {
         return
       }
+      clearLastGenerationRequestId()
+      setResumeRequestId(null)
+      setResumeSavedAtEpochMs(null)
       navigate(`/itineraries/${result.itineraryId}`)
     } catch (err: unknown) {
       if (!isMountedRef.current) {
@@ -303,6 +579,9 @@ export function GenerationModal({ onClose, onFallback }: GenerationModalProps): 
         await selectDraft(sel.draftId, sel.generationRequestId, sel.selectedPhotoUrl)
         if (!isMountedRef.current) return
       }
+      clearLastGenerationRequestId()
+      setResumeRequestId(null)
+      setResumeSavedAtEpochMs(null)
       onClose()
     } catch (err: unknown) {
       if (!isMountedRef.current) return
@@ -323,6 +602,98 @@ export function GenerationModal({ onClose, onFallback }: GenerationModalProps): 
     setStep('input')
   }
 
+  const handleLocateMe = (): void => {
+    if (!navigator.geolocation) return
+    setLocating(true)
+    setGeoError(null)
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const { latitude, longitude } = position.coords
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=en`,
+          )
+          if (res.ok) {
+            const data = await res.json() as { address?: { city?: string; town?: string; village?: string; state?: string; country?: string } }
+            const addr = data.address
+            const city = addr?.city ?? addr?.town ?? addr?.village ?? ''
+            const country = addr?.country ?? ''
+            const location = [city, country].filter(Boolean).join(', ')
+            if (location) {
+              setDepartureFrom(location)
+            } else {
+              setDepartureFrom(`${latitude.toFixed(2)}, ${longitude.toFixed(2)}`)
+            }
+          }
+        } catch { /* geocoding failed — use coords */ }
+        setLocating(false)
+      },
+      (err) => {
+        setLocating(false)
+        if (err.code === err.PERMISSION_DENIED) {
+          setGeoError(t('ai-generation:modal.locationDenied'))
+        } else {
+          setGeoError(t('ai-generation:modal.locationFailed'))
+        }
+      },
+      { timeout: 10000, enableHighAccuracy: false },
+    )
+  }
+
+  const handleReset = (): void => {
+    clearSavedSettings()
+    setPrompt(DEFAULT_SETTINGS.prompt)
+    setSelectedDraftCount(DEFAULT_SETTINGS.selectedDraftCount)
+    setSelectedOutputDepth(DEFAULT_SETTINGS.selectedOutputDepth)
+    setLanguageMode(DEFAULT_SETTINGS.languageMode)
+    setLanguageCode(DEFAULT_SETTINGS.languageCode)
+    setLanguageOther(DEFAULT_SETTINGS.languageOther)
+    setDepartureFrom(DEFAULT_SETTINGS.departureFrom)
+    setTiming(DEFAULT_SETTINGS.timing)
+    setTimingOther(DEFAULT_SETTINGS.timingOther)
+    setTimingDateFrom(DEFAULT_SETTINGS.timingDateFrom)
+    setTimingDateTo(DEFAULT_SETTINGS.timingDateTo)
+    setTravelerProfile(DEFAULT_SETTINGS.travelerProfile)
+    setTravelerProfileOther(DEFAULT_SETTINGS.travelerProfileOther)
+    setBudgetProfile(DEFAULT_SETTINGS.budgetProfile)
+    setBudgetProfileOther(DEFAULT_SETTINGS.budgetProfileOther)
+    setSelectedPromptPreset('')
+    setErrorMessage(null)
+    const defaultModel = availableModels.find((m) => m.id === 'gpt-4o') ?? availableModels[0]
+    if (defaultModel) setSelectedModel(defaultModel.id)
+  }
+
+  const getResumeRelativeTime = (): string => {
+    if (!resumeSavedAtEpochMs) {
+      return t('ai-generation:modal.generatedJustNow')
+    }
+
+    const elapsedMs = Math.max(0, Date.now() - resumeSavedAtEpochMs)
+    const elapsedMinutes = Math.floor(elapsedMs / 60000)
+
+    if (elapsedMinutes < 1) {
+      return t('ai-generation:modal.generatedJustNow')
+    }
+
+    if (elapsedMinutes < 60) {
+      return t('ai-generation:modal.generatedRelative', {
+        time: t('ai-generation:modal.relativeMinutesShort', { count: elapsedMinutes }),
+      })
+    }
+
+    const elapsedHours = Math.floor(elapsedMinutes / 60)
+    if (elapsedHours < 24) {
+      return t('ai-generation:modal.generatedRelative', {
+        time: t('ai-generation:modal.relativeHoursShort', { count: elapsedHours }),
+      })
+    }
+
+    const elapsedDays = Math.floor(elapsedHours / 24)
+    return t('ai-generation:modal.generatedRelative', {
+      time: t('ai-generation:modal.relativeDaysShort', { count: elapsedDays }),
+    })
+  }
+
   return (
     <div
       className="generation-modal-overlay"
@@ -339,16 +710,50 @@ export function GenerationModal({ onClose, onFallback }: GenerationModalProps): 
             onClick={handleCancel}
             aria-label={t('ai-generation:modal.cancelButton')}
           >
-            ×
+            <X size={18} />
           </button>
         </div>
+
+        {resumeRequestId && (step === 'input' || (step === 'error' && !generationRequestId)) ? (
+          <div className="generation-modal__resume-panel" aria-live="polite">
+            <div className="generation-modal__resume-info">
+              <span className="generation-modal__resume-title">
+                {t('ai-generation:modal.lastDraftsAvailable')}
+              </span>
+              <span className="generation-modal__resume-subtitle">
+                {getResumeRelativeTime()}
+              </span>
+            </div>
+            <button
+              type="button"
+              className="generation-modal__resume-cta"
+              onClick={() => void handleResumeLatest()}
+              disabled={isResuming}
+            >
+              {isResuming
+                ? t('ai-generation:modal.resumingButton')
+                : t('ai-generation:modal.resumeCta')}
+            </button>
+          </div>
+        ) : null}
 
         <div className="generation-modal__body">
           {(step === 'input' || (step === 'error' && !generationRequestId)) && (
             <>
-              <label htmlFor="generation-prompt" className="generation-modal__label">
-                {t('ai-generation:modal.promptLabel')}
-              </label>
+              <div className="generation-modal__prompt-header">
+                <label htmlFor="generation-prompt" className="generation-modal__label">
+                  {t('ai-generation:modal.promptLabel')}
+                </label>
+                <button
+                  type="button"
+                  className="generation-modal__reset"
+                  onClick={handleReset}
+                  title={t('ai-generation:modal.resetButton')}
+                  aria-label={t('ai-generation:modal.resetButton')}
+                >
+                  <ArrowCounterClockwise size={16} />
+                </button>
+              </div>
               <textarea
                 id="generation-prompt"
                 className="generation-modal__textarea"
@@ -384,9 +789,14 @@ export function GenerationModal({ onClose, onFallback }: GenerationModalProps): 
                 </div>
 
                 <div className="generation-modal__control-group generation-modal__control-group--depth">
-                  <label className="generation-modal__label">
-                    {t('ai-generation:modal.outputDepthLabel')}
-                  </label>
+                  <div className="generation-modal__depth-label-row">
+                    <label className="generation-modal__label">
+                      {t('ai-generation:modal.outputDepthLabel')}
+                    </label>
+                    <span className="generation-modal__depth-scope-hint">
+                      {t(`ai-generation:modal.outputScopeInline${selectedOutputDepth.charAt(0).toUpperCase() + selectedOutputDepth.slice(1)}`)}
+                    </span>
+                  </div>
                   <div className="generation-modal__depth-segmented" role="radiogroup" aria-label={t('ai-generation:modal.outputDepthLabel')}>
                     {DEPTH_VALUES.map((d) => (
                       <button
@@ -408,6 +818,7 @@ export function GenerationModal({ onClose, onFallback }: GenerationModalProps): 
                 {t('ai-generation:modal.controlsHint')}
               </p>
 
+              <div className="generation-modal__options-group">
               <button
                 type="button"
                 className="generation-modal__advanced-toggle"
@@ -418,6 +829,181 @@ export function GenerationModal({ onClose, onFallback }: GenerationModalProps): 
 
               {showAdvanced ? (
                 <div className="generation-modal__advanced">
+                  <div className="generation-modal__advanced-row">
+                    <label htmlFor="generation-language" className="generation-modal__label">
+                      {t('ai-generation:modal.languageLabel')}
+                    </label>
+                    <select
+                      id="generation-language"
+                      value={languageMode === 'curated' ? `curated:${languageCode}` : languageMode}
+                      onChange={(e) => {
+                        const val = e.target.value
+                        if (val === 'auto') {
+                          setLanguageMode('auto')
+                        } else if (val === 'other') {
+                          setLanguageMode('other')
+                        } else if (val.startsWith('curated:')) {
+                          setLanguageMode('curated')
+                          setLanguageCode(val.replace('curated:', '') as CuratedLanguageCode)
+                        }
+                      }}
+                    >
+                      <option value="auto">{t('ai-generation:modal.languageAuto')}</option>
+                      {CURATED_LANGUAGE_CODES.map((code) => (
+                        <option key={code} value={`curated:${code}`}>
+                          {t(`ai-generation:modal.languageCodes.${code}`)}
+                        </option>
+                      ))}
+                      <option value="other">{t('ai-generation:modal.languageOtherLabel')}</option>
+                    </select>
+                    {languageMode === 'other' && (
+                      <input
+                        type="text"
+                        className="generation-modal__other-input"
+                        value={languageOther}
+                        onChange={(e) => setLanguageOther(e.target.value)}
+                        placeholder={t('ai-generation:modal.languageOtherPlaceholder')}
+                        maxLength={40}
+                      />
+                    )}
+                  </div>
+
+                  <div className="generation-modal__advanced-row">
+                    <label htmlFor="generation-departure" className="generation-modal__label">
+                      {t('ai-generation:modal.departureLabel')}
+                    </label>
+                    <div className="generation-modal__departure-group">
+                      <input
+                        id="generation-departure"
+                        type="text"
+                        className="generation-modal__other-input"
+                        value={departureFrom}
+                        onChange={(e) => { setDepartureFrom(e.target.value); setGeoError(null) }}
+                        placeholder={t('ai-generation:modal.departurePlaceholder')}
+                        maxLength={100}
+                      />
+                      {typeof navigator !== 'undefined' && 'geolocation' in navigator && (
+                        <button
+                          type="button"
+                          className="generation-modal__locate-btn"
+                          onClick={handleLocateMe}
+                          disabled={locating}
+                          aria-label={t('ai-generation:modal.locateMe')}
+                          title={t('ai-generation:modal.locateMe')}
+                        >
+                          {locating ? '…' : '📍'}
+                        </button>
+                      )}
+                    </div>
+                    {geoError && (
+                      <p className="generation-modal__geo-error">{geoError}</p>
+                    )}
+                  </div>
+
+                  <div className="generation-modal__advanced-row">
+                    <label htmlFor="generation-timing" className="generation-modal__label">
+                      {t('ai-generation:modal.timingLabel')}
+                    </label>
+                    <select
+                      id="generation-timing"
+                      value={timing}
+                      onChange={(e) => setTiming(e.target.value as TimingValue | '')}
+                    >
+                      <option value="">{t('ai-generation:modal.timingNone')}</option>
+                      {TIMING_VALUES.map((v) => (
+                        <option key={v} value={v}>
+                          {t(`ai-generation:modal.timingValues.${v}`)}
+                        </option>
+                      ))}
+                    </select>
+                    {timing === 'customDates' && (
+                      <div className="generation-modal__date-range">
+                        <input
+                          type="date"
+                          className="generation-modal__date-input"
+                          value={timingDateFrom}
+                          onChange={(e) => setTimingDateFrom(e.target.value)}
+                          aria-label={t('ai-generation:modal.timingDateFrom')}
+                        />
+                        <span className="generation-modal__date-separator">–</span>
+                        <input
+                          type="date"
+                          className="generation-modal__date-input"
+                          value={timingDateTo}
+                          onChange={(e) => setTimingDateTo(e.target.value)}
+                          min={timingDateFrom || undefined}
+                          aria-label={t('ai-generation:modal.timingDateTo')}
+                        />
+                      </div>
+                    )}
+                    {timing === 'other' && (
+                      <input
+                        type="text"
+                        className="generation-modal__other-input"
+                        value={timingOther}
+                        onChange={(e) => setTimingOther(e.target.value)}
+                        placeholder={t('ai-generation:modal.timingOtherPlaceholder')}
+                        maxLength={60}
+                      />
+                    )}
+                  </div>
+
+                  <div className="generation-modal__advanced-row">
+                    <label htmlFor="generation-traveler" className="generation-modal__label">
+                      {t('ai-generation:modal.travelerProfileLabel')}
+                    </label>
+                    <select
+                      id="generation-traveler"
+                      value={travelerProfile}
+                      onChange={(e) => setTravelerProfile(e.target.value as TravelerProfileValue | '')}
+                    >
+                      <option value="">{t('ai-generation:modal.travelerProfileNone')}</option>
+                      {TRAVELER_VALUES.map((v) => (
+                        <option key={v} value={v}>
+                          {t(`ai-generation:modal.travelerProfileValues.${v}`)}
+                        </option>
+                      ))}
+                    </select>
+                    {travelerProfile === 'other' && (
+                      <input
+                        type="text"
+                        className="generation-modal__other-input"
+                        value={travelerProfileOther}
+                        onChange={(e) => setTravelerProfileOther(e.target.value)}
+                        placeholder={t('ai-generation:modal.travelerProfileOtherPlaceholder')}
+                        maxLength={60}
+                      />
+                    )}
+                  </div>
+
+                  <div className="generation-modal__advanced-row">
+                    <label htmlFor="generation-budget" className="generation-modal__label">
+                      {t('ai-generation:modal.budgetProfileLabel')}
+                    </label>
+                    <select
+                      id="generation-budget"
+                      value={budgetProfile}
+                      onChange={(e) => setBudgetProfile(e.target.value as BudgetProfileValue | '')}
+                    >
+                      <option value="">{t('ai-generation:modal.budgetProfileNone')}</option>
+                      {BUDGET_VALUES.map((v) => (
+                        <option key={v} value={v}>
+                          {t(`ai-generation:modal.budgetProfileValues.${v}`)}
+                        </option>
+                      ))}
+                    </select>
+                    {budgetProfile === 'other' && (
+                      <input
+                        type="text"
+                        className="generation-modal__other-input"
+                        value={budgetProfileOther}
+                        onChange={(e) => setBudgetProfileOther(e.target.value)}
+                        placeholder={t('ai-generation:modal.budgetProfileOtherPlaceholder')}
+                        maxLength={60}
+                      />
+                    )}
+                  </div>
+
                   <div className="generation-modal__advanced-row">
                     <label htmlFor="generation-model" className="generation-modal__label">
                       {t('ai-generation:modal.modelLabel')}
@@ -469,6 +1055,66 @@ export function GenerationModal({ onClose, onFallback }: GenerationModalProps): 
                 <p className="error generation-modal__error">{errorMessage}</p>
               ) : null}
 
+              <div className="generation-modal__summary-row">
+                <span className="generation-modal__summary-chip">
+                  <strong>{t('ai-generation:modal.summaryLanguage')}:</strong>{' '}
+                  {languageMode === 'auto'
+                    ? t('ai-generation:modal.languageAuto')
+                    : languageMode === 'curated'
+                      ? t(`ai-generation:modal.languageCodes.${languageCode}`)
+                      : languageOther.trim() || t('ai-generation:modal.languageOtherLabel')}
+                </span>
+                <span className="generation-modal__summary-chip">
+                  <strong>{t('ai-generation:modal.summaryModel')}:</strong>{' '}
+                  {availableModels.find((m) => m.id === selectedModel)?.label ?? selectedModel}
+                </span>
+                {timing && timing !== 'other' && timing !== 'customDates' && (
+                  <span className="generation-modal__summary-chip">
+                    <strong>{t('ai-generation:modal.summaryTiming')}:</strong>{' '}
+                    {t(`ai-generation:modal.timingValues.${timing}`)}
+                  </span>
+                )}
+                {timing === 'customDates' && timingDateFrom && (
+                  <span className="generation-modal__summary-chip">
+                    <strong>{t('ai-generation:modal.summaryTiming')}:</strong>{' '}
+                    {timingDateTo ? `${timingDateFrom} – ${timingDateTo}` : timingDateFrom}
+                  </span>
+                )}
+                {timing === 'other' && timingOther.trim() && (
+                  <span className="generation-modal__summary-chip">
+                    <strong>{t('ai-generation:modal.summaryTiming')}:</strong> {timingOther.trim()}
+                  </span>
+                )}
+                {departureFrom.trim() && (
+                  <span className="generation-modal__summary-chip">
+                    <strong>{t('ai-generation:modal.summaryDeparture')}:</strong> {departureFrom.trim()}
+                  </span>
+                )}
+                {travelerProfile && travelerProfile !== 'other' && (
+                  <span className="generation-modal__summary-chip">
+                    <strong>{t('ai-generation:modal.summaryTraveler')}:</strong>{' '}
+                    {t(`ai-generation:modal.travelerProfileValues.${travelerProfile}`)}
+                  </span>
+                )}
+                {travelerProfile === 'other' && travelerProfileOther.trim() && (
+                  <span className="generation-modal__summary-chip">
+                    <strong>{t('ai-generation:modal.summaryTraveler')}:</strong> {travelerProfileOther.trim()}
+                  </span>
+                )}
+                {budgetProfile && budgetProfile !== 'other' && (
+                  <span className="generation-modal__summary-chip">
+                    <strong>{t('ai-generation:modal.summaryBudget')}:</strong>{' '}
+                    {t(`ai-generation:modal.budgetProfileValues.${budgetProfile}`)}
+                  </span>
+                )}
+                {budgetProfile === 'other' && budgetProfileOther.trim() && (
+                  <span className="generation-modal__summary-chip">
+                    <strong>{t('ai-generation:modal.summaryBudget')}:</strong> {budgetProfileOther.trim()}
+                  </span>
+                )}
+              </div>
+              </div>
+
               <div className="generation-modal__actions">
                 <button
                   type="button"
@@ -476,13 +1122,6 @@ export function GenerationModal({ onClose, onFallback }: GenerationModalProps): 
                   onClick={() => void handleGenerate()}
                 >
                   {t('ai-generation:modal.generateButton')}
-                </button>
-                <button
-                  type="button"
-                  className="generation-modal__cancel"
-                  onClick={handleCancel}
-                >
-                  {t('ai-generation:modal.cancelButton')}
                 </button>
               </div>
             </>
