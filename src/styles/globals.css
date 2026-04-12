@@ -2986,7 +2986,9 @@ button:disabled {
     gap: 0.05rem;
   }
 
-  .home-page-shell .home-panel--dashboard {
+  /* ---- Global mobile panel bleed ---- */
+  .app-shell > .panel,
+  .app-shell > .home-panel {
     margin-inline: calc(-1 * var(--space-4));
     width: calc(100% + (2 * var(--space-4)));
     border-left: 0;
@@ -2995,13 +2997,18 @@ button:disabled {
     box-shadow: none;
   }
 
-  .home-page-shell .dashboard-content-padding,
-  .home-page-shell .dashboard-list-shell__state {
+  .app-shell > .panel {
+    padding-left: max(var(--space-4), env(safe-area-inset-left));
+    padding-right: max(var(--space-4), env(safe-area-inset-right));
+  }
+
+  .dashboard-content-padding,
+  .dashboard-list-shell__state {
     padding-left: max(var(--space-3), env(safe-area-inset-left));
     padding-right: max(var(--space-3), env(safe-area-inset-right));
   }
 
-  .home-page-shell .dashboard-pagination-bar {
+  .dashboard-pagination-bar {
     padding-left: max(0.45rem, env(safe-area-inset-left));
     padding-right: max(0.45rem, env(safe-area-inset-right));
   }
