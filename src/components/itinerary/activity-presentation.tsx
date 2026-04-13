@@ -4,10 +4,12 @@ import {
   Bed,
   Bus,
   Car,
+  Compass,
   ForkKnife,
   MapPin,
   Minus,
   NotePencil,
+  ShoppingBag,
   Star,
 } from '@phosphor-icons/react'
 
@@ -23,6 +25,8 @@ export const ACTIVITY_TYPE_ICON: Record<ActivityType, ReactElement> = {
   note: <NotePencil size={18} />,
   custom: <Star size={18} />,
   divider: <Minus size={18} />,
+  shopping: <ShoppingBag size={18} />,
+  tour: <Compass size={18} />,
 }
 
 export const ACTIVITY_TYPE_COLOR: Record<ActivityType, { bg: string; icon: string }> = {
@@ -35,4 +39,6 @@ export const ACTIVITY_TYPE_COLOR: Record<ActivityType, { bg: string; icon: strin
   food: { bg: 'rgba(220,20,60,0.03)', icon: '#c62828' },
   custom: { bg: 'rgba(255,140,0,0.03)', icon: '#d2691e' },
   divider: { bg: 'transparent', icon: '#8a7a68' },
+  shopping: { bg: 'rgba(233,30,99,0.03)', icon: '#c2185b' },
+  tour: { bg: 'rgba(0,150,136,0.03)', icon: '#00796b' },
 }

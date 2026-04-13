@@ -84,11 +84,28 @@ export function ItineraryPlanningView({ itinerary, onReorder, onToggleAnchored, 
       const targetDay = days.find((d) => d.dayNumber === targetDayNum)
       if (!targetDay) return
 
+      // Check if the dragged block contains anchored activities
+      const hasAnchored = draggedSection.activities.some((a) => a.anchorDate != null)
+      if (hasAnchored) {
+        const confirmed = window.confirm(t('common:itinerary.presentation.confirmAnchoredMove'))
+        if (!confirmed) return
+      }
+
+      // Update anchorDate for anchored activities moved to the target day
+      const movedSection = hasAnchored && targetDay.date
+        ? {
+            ...draggedSection,
+            activities: draggedSection.activities.map((a) =>
+              a.anchorDate != null ? { ...a, anchorDate: targetDay.date! } : a,
+            ),
+          }
+        : draggedSection
+
       const newSourceSections = [...sourceSections]
       newSourceSections.splice(sourceSectionIdx, 1)
 
       const targetSections = [...groupActivitiesForPlanning(targetDay.activities).sections]
-      targetSections.splice(targetPosition, 0, draggedSection)
+      targetSections.splice(targetPosition, 0, movedSection)
 
       const updatedDays = days.map((d) => {
         if (d.dayNumber === sourceDayNum) return { ...d, activities: flattenSectionsToActivities(newSourceSections) }

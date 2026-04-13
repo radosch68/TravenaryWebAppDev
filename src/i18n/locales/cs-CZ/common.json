@@ -123,16 +123,18 @@
         "poi": "Místo zájmu",
         "custom": "Vlastní",
         "carRental": "Pronájem auta",
-        "food": "Jídlo"
+        "food": "Jídlo",
+        "shopping": "Nákupy",
+        "tour": "Prohlídka"
       },
       "fieldTitle": "Název",
       "fieldText": "Popis",
       "fieldTime": "Čas začátku",
       "fieldTimeEnd": "Čas konce",
-      "fieldVendor": "Dodavatel",
-      "fieldBookingRef": "Číslo rezervace",
-      "fieldServiceCode": "Kód služby",
-      "fieldAirport": "Letiště",
+      "fieldCuisine": "Kuchyně",
+      "fieldGuidanceMode": "Průvodce",
+      "guidanceModeSelfGuided": "Na vlastní pěst",
+      "guidanceModeGuided": "S průvodcem",
       "createOwnBlock": "Vytvořit nový blok aktivit:",
       "blockTitle": "Název bloku aktivit",
       "blockTitlePlaceholder": "Název bloku…",
@@ -152,7 +154,11 @@
       "blockedMoveAnchored": "Tento den obsahuje ukotvené aktivity — přesouvat lze pouze dny bez smíšeného obsahu.",
       "mixedDayHint": "Tento den má ukotvené aktivity, které jsou vázané na toto datum.",
       "anchoredMarker": "Pevný závazek",
-      "toggleLabel": "Zobrazení"
+      "toggleLabel": "Zobrazení",
+      "confirmAnchoredMove": "Tato aktivita je ukotvená k určitému datu. Přesunutím do jiného dne se změní její datum ukotvení. Pokračovat?",
+      "confirmAnchoredMoveTitle": "Přesunout ukotvenou aktivitu",
+      "confirmAnchoredMoveAccept": "Přesunout",
+      "confirmAnchoredMoveCancel": "Zrušit"
     }
   }
 }

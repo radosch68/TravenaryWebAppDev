@@ -7,9 +7,9 @@ import { generateClientId } from '@/utils/client-id'
 import { formatLocalTime, getLocalizedTimeInputPlaceholder } from '@/utils/date-format'
 import { ACTIVITY_TYPE_COLOR, ACTIVITY_TYPE_ICON } from './activity-presentation'
 
-const FULL_EDIT_TYPES: ReadonlySet<ActivityType> = new Set(['note', 'poi', 'custom', 'carRental', 'food'])
-const LIMITED_EDIT_FIELDS = ['title', 'text', 'time', 'timeEnd', 'vendor', 'bookingRef', 'serviceCode', 'airport'] as const
-const CREATABLE_TYPES = ['note', 'poi', 'carRental', 'food', 'custom'] as const satisfies readonly ActivityType[]
+const FULL_EDIT_TYPES: ReadonlySet<ActivityType> = new Set(['note', 'poi', 'custom', 'carRental', 'food', 'shopping', 'tour'])
+const LIMITED_EDIT_FIELDS = ['title', 'text', 'time', 'timeEnd'] as const
+const CREATABLE_TYPES = ['note', 'poi', 'carRental', 'food', 'custom', 'shopping', 'tour'] as const satisfies readonly ActivityType[]
 type CreatableActivityType = (typeof CREATABLE_TYPES)[number]
 
 const ACTIVITY_TYPE_LABEL_KEY: Record<CreatableActivityType, string> = {
@@ -18,6 +18,8 @@ const ACTIVITY_TYPE_LABEL_KEY: Record<CreatableActivityType, string> = {
   custom: 'custom',
   carRental: 'carRental',
   food: 'food',
+  shopping: 'shopping',
+  tour: 'tour',
 }
 
 function normalizeTimeValue(value: string): string | undefined {
@@ -83,10 +85,8 @@ export function ActivityFormPanel({
   const [text, setText] = useState(activity?.text ?? '')
   const [time, setTime] = useState(() => useNativeTimeInput ? (activity?.time ?? '') : formatLocalTime(activity?.time, i18n.language))
   const [timeEnd, setTimeEnd] = useState(() => useNativeTimeInput ? (activity?.timeEnd ?? '') : formatLocalTime(activity?.timeEnd, i18n.language))
-  const [vendor, setVendor] = useState(activity?.vendor ?? '')
-  const [bookingRef, setBookingRef] = useState(activity?.bookingRef ?? '')
-  const [serviceCode, setServiceCode] = useState(activity?.serviceCode ?? '')
-  const [airport, setAirport] = useState(activity?.airport ?? '')
+  const [cuisine, setCuisine] = useState(activity?.details?.cuisine ?? '')
+  const [guidanceMode, setGuidanceMode] = useState<'selfGuided' | 'guided'>(activity?.details?.guidanceMode ?? 'selfGuided')
   const [createOwnBlock, setCreateOwnBlock] = useState(false)
   const [dividerTitle, setDividerTitle] = useState('')
   const timeInputRef = useRef<HTMLInputElement | null>(null)
@@ -106,24 +106,30 @@ export function ActivityFormPanel({
     const liveTime = normalizeTimeValue(timeInputRef.current?.value ?? time)
     const liveTimeEnd = normalizeTimeValue(timeEndInputRef.current?.value ?? timeEnd)
 
+    const activeType = isCreate ? type : activity!.type
+
     const result: ItineraryActivity = {
       id: activity?.id ?? generateClientId(),
-      type: isCreate ? type : activity!.type,
+      type: activeType,
       title: title.trim(),
-      isAnchored: activity?.isAnchored ?? false,
       ...(text.trim() ? { text: text.trim() } : {}),
       ...(liveTime ? { time: liveTime } : {}),
       ...(liveTimeEnd ? { timeEnd: liveTimeEnd } : {}),
-      ...(vendor.trim() ? { vendor: vendor.trim() } : {}),
-      ...(bookingRef.trim() ? { bookingRef: bookingRef.trim() } : {}),
-      ...(serviceCode.trim() ? { serviceCode: serviceCode.trim() } : {}),
-      ...(airport.trim() ? { airport: airport.trim() } : {}),
+      ...(activity?.anchorDate ? { anchorDate: activity.anchorDate } : {}),
     }
 
-    // Preserve fields we don't edit
-    if (activity?.subType) result.subType = activity.subType
-    if (activity?.pairedActivityId) result.pairedActivityId = activity.pairedActivityId
-    if (activity?.activityGroupId) result.activityGroupId = activity.activityGroupId
+    // Build type-specific details
+    if (activeType === 'food') {
+      result.details = cuisine.trim() ? { cuisine: cuisine.trim() } : {}
+    } else if (activeType === 'tour') {
+      result.details = { guidanceMode }
+    } else if (activity?.details) {
+      result.details = activity.details
+    }
+
+    // Preserve references and locations from edit
+    if (activity?.references) result.references = activity.references
+    if (activity?.locations) result.locations = activity.locations
 
     onSave({
       activity: result,
@@ -290,53 +296,32 @@ export function ActivityFormPanel({
         </div>
       </div>
 
-      {(!isFullEdit || type === 'flight' || type === 'accommodation' || type === 'transfer') && (
-        <>
-          <div className="activity-form-panel__field">
-            <label htmlFor="activity-vendor">{t('common:itinerary.dayEditor.fieldVendor')}</label>
-            <input
-              id="activity-vendor"
-              type="text"
-              value={vendor}
-              onChange={(e) => setVendor(e.target.value)}
-              disabled={disabled}
-            />
-          </div>
-          <div className="activity-form-panel__field-row">
-            <div className="activity-form-panel__field">
-              <label htmlFor="activity-booking-ref">{t('common:itinerary.dayEditor.fieldBookingRef')}</label>
-              <input
-                id="activity-booking-ref"
-                type="text"
-                value={bookingRef}
-                onChange={(e) => setBookingRef(e.target.value)}
-                disabled={disabled}
-              />
-            </div>
-            <div className="activity-form-panel__field">
-              <label htmlFor="activity-service-code">{t('common:itinerary.dayEditor.fieldServiceCode')}</label>
-              <input
-                id="activity-service-code"
-                type="text"
-                value={serviceCode}
-                onChange={(e) => setServiceCode(e.target.value)}
-                disabled={disabled}
-              />
-            </div>
-          </div>
-          {(type === 'flight' || activity?.type === 'flight') && (
-            <div className="activity-form-panel__field">
-              <label htmlFor="activity-airport">{t('common:itinerary.dayEditor.fieldAirport')}</label>
-              <input
-                id="activity-airport"
-                type="text"
-                value={airport}
-                onChange={(e) => setAirport(e.target.value)}
-                disabled={disabled}
-              />
-            </div>
-          )}
-        </>
+      {(type === 'food' || activity?.type === 'food') && (
+        <div className="activity-form-panel__field">
+          <label htmlFor="activity-cuisine">{t('common:itinerary.dayEditor.fieldCuisine')}</label>
+          <input
+            id="activity-cuisine"
+            type="text"
+            value={cuisine}
+            onChange={(e) => setCuisine(e.target.value)}
+            disabled={disabled}
+          />
+        </div>
+      )}
+
+      {(type === 'tour' || activity?.type === 'tour') && (
+        <div className="activity-form-panel__field">
+          <label htmlFor="activity-guidance-mode">{t('common:itinerary.dayEditor.fieldGuidanceMode')}</label>
+          <select
+            id="activity-guidance-mode"
+            value={guidanceMode}
+            onChange={(e) => setGuidanceMode(e.target.value as 'selfGuided' | 'guided')}
+            disabled={disabled}
+          >
+            <option value="selfGuided">{t('common:itinerary.dayEditor.guidanceModeSelfGuided')}</option>
+            <option value="guided">{t('common:itinerary.dayEditor.guidanceModeGuided')}</option>
+          </select>
+        </div>
       )}
 
       <div className="activity-form-panel__actions">

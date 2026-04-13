@@ -2,5 +2,7 @@
   "network": "Chyba sítě. Zkontrolujte připojení a zkuste to znovu.",
   "server": "Chyba serveru. Zkuste to prosím znovu.",
   "unknown": "Něco se pokazilo.",
-  "providerUnavailable": "Poskytovatel je nyní nedostupný. Použijte přihlášení e-mailem."
+  "providerUnavailable": "Poskytovatel je nyní nedostupný. Použijte přihlášení e-mailem.",
+  "dateConflict": "Některé ukotvené aktivity spadají mimo nový rozsah dat. Upravte aktivity nebo zvolte jiné počáteční datum.",
+  "dateConflictTitle": "Konflikt dat"
 }

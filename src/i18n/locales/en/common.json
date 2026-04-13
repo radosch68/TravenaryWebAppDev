@@ -120,16 +120,18 @@
         "poi": "Point of interest",
         "custom": "Custom",
         "carRental": "Car rental",
-        "food": "Food"
+        "food": "Food",
+        "shopping": "Shopping",
+        "tour": "Tour"
       },
       "fieldTitle": "Title",
       "fieldText": "Description",
       "fieldTime": "Start time",
       "fieldTimeEnd": "End time",
-      "fieldVendor": "Vendor",
-      "fieldBookingRef": "Booking ref",
-      "fieldServiceCode": "Service code",
-      "fieldAirport": "Airport",
+      "fieldCuisine": "Cuisine",
+      "fieldGuidanceMode": "Guidance",
+      "guidanceModeSelfGuided": "Self-guided",
+      "guidanceModeGuided": "Guided",
       "createOwnBlock": "Create a new activity block:",
       "blockTitle": "Activity block title",
       "blockTitlePlaceholder": "Block title…",
@@ -149,7 +151,11 @@
       "blockedMoveAnchored": "This day has anchored activities — only days without mixed content can be reordered.",
       "mixedDayHint": "This day has anchored activities that are locked to this date.",
       "anchoredMarker": "Fixed commitment",
-      "toggleLabel": "Presentation"
+      "toggleLabel": "Presentation",
+      "confirmAnchoredMove": "This activity is anchored to a specific date. Moving it to another day will update its anchor date. Continue?",
+      "confirmAnchoredMoveTitle": "Move anchored activity",
+      "confirmAnchoredMoveAccept": "Move",
+      "confirmAnchoredMoveCancel": "Cancel"
     }
   }
 }

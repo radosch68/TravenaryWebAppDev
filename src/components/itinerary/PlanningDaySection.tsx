@@ -6,7 +6,7 @@ import { useDraggable, useDroppable } from '@dnd-kit/core'
 import { Star } from '@phosphor-icons/react'
 
 import type { ItineraryActivity, ItineraryDay } from '@/services/contracts'
-import { groupActivitiesForPlanning } from '@/utils/activity-classification'
+import { groupActivitiesForPlanning, isActivityAnchored } from '@/utils/activity-classification'
 import { formatLocalTimeRange } from '@/utils/date-format'
 import { ACTIVITY_TYPE_ICON, ACTIVITY_TYPE_COLOR } from './activity-presentation'
 import { AnchoredStatusToggle } from './AnchoredStatusToggle'
@@ -175,7 +175,7 @@ function PlanningActivityRow({ activity, onToggleAnchored, disabled }: PlanningA
       }}
     >
       <AnchoredStatusToggle
-        isAnchored={activity.isAnchored}
+        isAnchored={isActivityAnchored(activity)}
         onToggle={(v) => onToggleAnchored(activity.id, v)}
         disabled={disabled}
       />

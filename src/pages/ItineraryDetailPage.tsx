@@ -13,7 +13,6 @@ import { ApiError } from '@/services/contracts'
 import { deleteItinerary, getItinerary, updateItinerary } from '@/services/itinerary-service'
 import type { ItineraryActivity, ItineraryActivityInput, ItineraryDay, UpdateItineraryRequest, ItineraryDetail } from '@/services/contracts'
 import { formatLocalDate } from '@/utils/date-format'
-import { isAnchoredByDefault } from '@/utils/activity-classification'
 import { unsplashUrl } from '@/utils/unsplash-url'
 import { PencilSimple } from '@phosphor-icons/react'
 
@@ -22,7 +21,7 @@ type PresentationMode = 'planning' | 'timeline'
 export function ItineraryDetailPage(): ReactElement {
   const { itineraryId } = useParams<{ itineraryId: string }>()
   const navigate = useNavigate()
-  const { t, i18n } = useTranslation(['common'])
+  const { t, i18n } = useTranslation(['common', 'errors'])
   const hasRestoredScrollRef = useRef(false)
   const [dashboardReturnUrl, setDashboardReturnUrl] = useState('/?page=1')
 
@@ -32,6 +31,7 @@ export function ItineraryDetailPage(): ReactElement {
   const [deleteError, setDeleteError] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [reorderError, setReorderError] = useState(false)
+  const [dateConflictError, setDateConflictError] = useState(false)
   const [presentationMode, setPresentationMode] = useState<PresentationMode>('planning')
 
   const patchItinerary = useCallback(
@@ -61,12 +61,15 @@ export function ItineraryDetailPage(): ReactElement {
   const handleToggleAnchored = useCallback(
     (dayNumber: number, activityId: string, newValue: boolean) => {
       if (!itinerary) return
-      const updatedDays = itinerary.days.map((day) => {
-        if (day.dayNumber !== dayNumber) return day
+      const day = itinerary.days.find((d) => d.dayNumber === dayNumber)
+      if (!day) return
+      const newAnchorDate = newValue ? (day.date ?? null) : null
+      const updatedDays = itinerary.days.map((d) => {
+        if (d.dayNumber !== dayNumber) return d
         return {
-          ...day,
-          activities: day.activities.map((a) =>
-            a.id === activityId ? { ...a, isAnchored: newValue } : a,
+          ...d,
+          activities: d.activities.map((a) =>
+            a.id === activityId ? { ...a, anchorDate: newAnchorDate } : a,
           ),
         }
       })
@@ -389,7 +392,18 @@ export function ItineraryDetailPage(): ReactElement {
           <div className="itinerary-detail-meta-grid__left">
             <EditableField
               value={itinerary.startDate ?? ''}
-              onSave={async (v) => patchItinerary({ startDate: v || null })}
+              onSave={async (v) => {
+                setDateConflictError(false)
+                try {
+                  await patchItinerary({ startDate: v || null })
+                } catch (err) {
+                  if (err instanceof ApiError && err.status === 409) {
+                    setDateConflictError(true)
+                    return
+                  }
+                  throw err
+                }
+              }}
               renderDisplay={(val, onEdit) => (
                 <span className="editable-display editable-display--inline">
                   <span>{val ? formatLocalDate(val, i18n.language) : t('common:itinerary.missingDate')}</span>
@@ -428,19 +442,28 @@ export function ItineraryDetailPage(): ReactElement {
             <EditableField
               value={itinerary.endDate ?? ''}
               onSave={async (v) => {
-                if (!v) {
-                  await patchItinerary({ startDate: null })
-                  return
+                setDateConflictError(false)
+                try {
+                  if (!v) {
+                    await patchItinerary({ startDate: null })
+                    return
+                  }
+                  const dayCount = itinerary.days.length
+                  if (dayCount <= 1) {
+                    await patchItinerary({ startDate: v })
+                    return
+                  }
+                  const endMs = new Date(v + 'T00:00:00Z').getTime()
+                  const newStartMs = endMs - (dayCount - 1) * 86_400_000
+                  const newStart = new Date(newStartMs).toISOString().slice(0, 10)
+                  await patchItinerary({ startDate: newStart })
+                } catch (err) {
+                  if (err instanceof ApiError && err.status === 409) {
+                    setDateConflictError(true)
+                    return
+                  }
+                  throw err
                 }
-                const dayCount = itinerary.days.length
-                if (dayCount <= 1) {
-                  await patchItinerary({ startDate: v })
-                  return
-                }
-                const endMs = new Date(v + 'T00:00:00Z').getTime()
-                const newStartMs = endMs - (dayCount - 1) * 86_400_000
-                const newStart = new Date(newStartMs).toISOString().slice(0, 10)
-                await patchItinerary({ startDate: newStart })
               }}
               renderDisplay={(val, onEdit) => (
                 <span className="editable-display editable-display--inline">
@@ -491,6 +514,8 @@ export function ItineraryDetailPage(): ReactElement {
             </div>
           </div>
         </div>
+
+        {dateConflictError && <p className="error">{t('errors:dateConflict')}</p>}
 
         {/* Day list — presentation-dependent rendering */}
         {presentationMode === 'planning' ? (
@@ -581,16 +606,7 @@ function buildDayPayload(days: ItineraryDay[]): UpdateItineraryRequest['days'] {
 }
 
 function toActivityInput(activity: ItineraryActivity): ItineraryActivityInput {
-  const { isAnchored, ...rest } = activity as ItineraryActivity & Record<string, unknown>
-
-  if (isAnchored === isAnchoredByDefault(activity.type)) {
-    return rest as ItineraryActivityInput
-  }
-
-  return {
-    ...(rest as ItineraryActivityInput),
-    isAnchored,
-  }
+  return activity
 }
 
 /* ---- Cover photo with edit overlay ---- */

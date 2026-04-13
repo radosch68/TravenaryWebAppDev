@@ -1,18 +1,12 @@
-import type { ActivityType, ItineraryActivity } from '@/services/contracts'
+import type { ItineraryActivity } from '@/services/contracts'
 import { generateClientId } from '@/utils/client-id'
 
-const ANCHORED_BY_DEFAULT: ReadonlySet<ActivityType> = new Set([
-  'flight',
-  'accommodation',
-  'transfer',
-])
-
-export function isAnchoredByDefault(type: ActivityType): boolean {
-  return ANCHORED_BY_DEFAULT.has(type)
+export function isActivityAnchored(activity: ItineraryActivity): boolean {
+  return typeof activity.anchorDate === 'string' && activity.anchorDate.length > 0
 }
 
 export function getEffectiveAnchored(activity: ItineraryActivity): boolean {
-  return activity.isAnchored
+  return isActivityAnchored(activity)
 }
 
 /* ---- Section-based grouping for Planning view ---- */
@@ -135,7 +129,6 @@ export function flattenSectionsToActivities(sections: PlanningSection[]): Itiner
           id: section.dividerId ?? generateClientId(),
           type: 'divider',
           title: section.dividerLabel ?? '',
-          isAnchored: false,
         })
       } else if (prevWasFlexible) {
         // Insert empty divider to preserve block boundary
@@ -143,7 +136,6 @@ export function flattenSectionsToActivities(sections: PlanningSection[]): Itiner
           id: generateClientId(),
           type: 'divider',
           title: '',
-          isAnchored: false,
         })
       }
       result.push(...section.activities)

@@ -58,28 +58,27 @@ export interface WebReference {
   type?: 'photo' | 'video' | 'webpage'
 }
 
-export type ActivityType = 'note' | 'flight' | 'accommodation' | 'transfer' | 'poi' | 'carRental' | 'custom' | 'food' | 'divider'
+export type ActivityType = 'note' | 'flight' | 'accommodation' | 'transfer' | 'poi' | 'carRental' | 'custom' | 'food' | 'divider' | 'shopping' | 'tour'
+
+export interface ActivityDetails {
+  cuisine?: string
+  guidanceMode?: 'selfGuided' | 'guided'
+}
 
 export interface ItineraryActivity {
   id: string
   type: ActivityType
-  subType?: 'start' | 'end'
   title: string
   text?: string
   time?: string
   timeEnd?: string
-  bookingRef?: string
-  serviceCode?: string
-  vendor?: string
-  airport?: string
-  activityGroupId?: string
-  pairedActivityId?: string
-  isAnchored: boolean
+  anchorDate?: string | null
+  details?: ActivityDetails
+  references?: WebReference[]
+  locations?: Array<{ caption?: string; coordinates?: number[]; address?: string }>
 }
 
-export type ItineraryActivityInput = Omit<ItineraryActivity, 'isAnchored'> & {
-  isAnchored?: boolean
-}
+export type ItineraryActivityInput = ItineraryActivity
 
 export interface ItineraryDay {
   dayNumber: number
@@ -119,6 +118,7 @@ export interface ItineraryDetail {
   coverPhoto?: WebReference
   startDate?: string
   endDate?: string
+  schemaVer: number
   hasShareLink: boolean
   days: ItineraryDay[]
   createdAt: string
@@ -126,6 +126,11 @@ export interface ItineraryDetail {
 }
 
 export type SharedItineraryDetail = Omit<ItineraryDetail, 'userId' | 'hasShareLink'>
+
+export interface AnchorDateConflictResponse {
+  code: 'CONFLICT'
+  message: string
+}
 
 export interface ShareTokenResponse {
   shareToken: string

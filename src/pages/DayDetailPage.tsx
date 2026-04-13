@@ -22,7 +22,6 @@ import { ApiError } from '@/services/contracts'
 import { getItinerary, updateItinerary } from '@/services/itinerary-service'
 import type { ItineraryDetail, ItineraryActivity, ItineraryActivityInput, ItineraryDay, UpdateItineraryRequest } from '@/services/contracts'
 import { formatLocalDate, formatWeekday } from '@/utils/date-format'
-import { isAnchoredByDefault } from '@/utils/activity-classification'
 import { sectionKey } from '@/utils/day-edit-transforms'
 import { PencilSimple } from '@phosphor-icons/react'
 import { useDayEditStore } from '@/store/day-edit-store'
@@ -419,16 +418,7 @@ export function DayDetailPage(): ReactElement {
 }
 
 function toActivityInput(activity: ItineraryActivity): ItineraryActivityInput {
-  const { isAnchored, ...rest } = activity
-
-  if (isAnchored === isAnchoredByDefault(activity.type)) {
-    return rest as ItineraryActivityInput
-  }
-
-  return {
-    ...(rest as ItineraryActivityInput),
-    isAnchored,
-  }
+  return activity
 }
 
 function DayPanelCloseButton({ ariaLabel, onClick }: { ariaLabel: string; onClick: () => void }): ReactElement {
