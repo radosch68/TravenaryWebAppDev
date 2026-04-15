@@ -16,6 +16,8 @@
   --shadow: 0 14px 36px rgba(58, 36, 9, 0.18);
   --control-circle-size: 48px;
   font-family: 'Avenir Next', 'Segoe UI', sans-serif;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 * {
@@ -231,6 +233,12 @@ a {
 
 .dashboard-pagination-bar__button:hover:not(:disabled) {
   background: rgba(13, 124, 102, 0.14);
+}
+
+@media (hover: none) {
+  .dashboard-pagination-bar__button:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.9);
+  }
 }
 
 .dashboard-pagination-bar__button:disabled {
@@ -736,41 +744,6 @@ button:disabled {
   cursor: not-allowed;
 }
 
-.generation-modal-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-3);
-  background: rgba(47, 36, 22, 0.58);
-}
-
-.generation-modal {
-  display: flex;
-  flex-direction: column;
-  width: min(100%, 720px);
-  max-height: min(90vh, 860px);
-  overflow: hidden;
-  border: 1px solid var(--surface-border);
-  border-radius: var(--radius);
-  background: rgba(255, 252, 246, 0.98);
-  box-shadow: var(--shadow);
-}
-
-.generation-modal__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-  padding: var(--space-4) var(--space-4) var(--space-2);
-}
-
-.generation-modal__header h2 {
-  margin: 0;
-}
-
 .generation-modal__resume-panel {
   display: flex;
   align-items: center;
@@ -823,20 +796,6 @@ button:disabled {
   cursor: not-allowed;
 }
 
-.generation-modal__close {
-  min-width: 2.5rem;
-  min-height: 2.5rem;
-  padding: 0;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--text-muted);
-  border: 1px solid var(--surface-border);
-  font-size: 1.35rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
 .generation-modal__prompt-header {
   display: flex;
   align-items: flex-end;
@@ -861,12 +820,8 @@ button:disabled {
 
 .generation-modal__body {
   display: grid;
-  flex: 1;
-  min-height: 0;
   gap: var(--space-3);
   padding: 0 var(--space-4) var(--space-4);
-  overflow-y: auto;
-  scrollbar-gutter: stable;
 }
 
 .generation-modal__label {
@@ -1107,14 +1062,6 @@ button:disabled {
   padding-top: var(--space-2);
 }
 
-.generation-modal__progress {
-  height: 10px;
-  background: var(--surface-border);
-  border-radius: 0 0 var(--radius) var(--radius);
-  overflow: hidden;
-  flex-shrink: 0;
-}
-
 .generation-modal__progress-bar {
   height: 100%;
   background: var(--accent-strong);
@@ -1161,13 +1108,6 @@ button:disabled {
   margin: 0;
 }
 
-.generation-modal__actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--space-2);
-  flex-wrap: wrap;
-}
-
 .generation-modal__secondary {
   background: transparent;
   color: var(--accent-strong);
@@ -1175,13 +1115,6 @@ button:disabled {
 }
 
 @media (max-width: 640px) {
-  .generation-modal__header {
-    padding: var(--space-3) var(--space-3) var(--space-2);
-  }
-
-  .generation-modal__header h2 {
-    font-size: 1.25rem;
-  }
 
   .generation-modal__prompt-actions {
     gap: var(--space-1);
@@ -1217,10 +1150,7 @@ button:disabled {
 .draft-carousel__card {
   display: grid;
   gap: var(--space-2);
-  border: 1px solid var(--surface-border);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.94);
-  padding: var(--space-4);
+  padding: 0 var(--space-4);
 }
 
 .draft-carousel__title,
@@ -1725,12 +1655,13 @@ button:disabled {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-3);
   position: sticky;
   top: 0;
   z-index: 6;
   margin: calc(-1 * var(--itinerary-day-item-pad-block)) calc(-1 * var(--itinerary-day-item-pad-inline-right)) 0 calc(-1 * var(--itinerary-day-item-pad-inline-left));
-  padding: 0.34rem calc(0.5rem + var(--itinerary-day-item-pad-inline-right)) 0.34rem calc(0.5rem + var(--itinerary-day-item-pad-inline-left));
+  padding: 0.6rem calc(0.5rem + var(--itinerary-day-item-pad-inline-right)) 0.6rem calc(0.5rem + var(--itinerary-day-item-pad-inline-left));
+  min-height: 4.1rem;
   background: #f1f2f3;
   border-top: 1px solid rgba(120, 124, 133, 0.28);
   border-bottom: 1px solid rgba(120, 124, 133, 0.22);
@@ -1738,25 +1669,69 @@ button:disabled {
   border-radius: 0;
 }
 
+.itinerary-day-header__left {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  min-width: 0;
+  gap: 0.08rem;
+}
+
 .itinerary-day-header__weekday {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
   text-align: left;
   color: var(--text-muted);
-  font-weight: 400;
+  font-weight: 500;
+  line-height: 1.05;
+  font-size: 1.02rem;
 }
 
 .itinerary-day-header__date {
   text-align: center;
-  font-weight: 500;
+  font-weight: 700;
+  font-size: 1.65rem;
+  line-height: 1.05;
+  white-space: nowrap;
 }
 
 .itinerary-day-header__index {
-  text-align: right;
-  justify-self: end;
   color: var(--text-muted);
-  font-weight: 400;
+  font-weight: 500;
+  font-size: 0.94rem;
+  line-height: 1.1;
+}
+
+.itinerary-day-header__actions {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+}
+
+.itinerary-day-header__edit-day-button {
+  min-height: 2.25rem;
+  min-width: 5.6rem;
+  border-radius: 999px;
+  border: 1px solid rgba(13, 124, 102, 0.35);
+  background: rgba(13, 124, 102, 0.11);
+  color: var(--accent-strong);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  padding: 0.42rem 0.9rem;
+}
+
+.itinerary-day-header__edit-day-button:hover {
+  background: rgba(13, 124, 102, 0.18);
+}
+
+.itinerary-day-header__edit-day-button:focus-visible {
+  outline: 2px solid rgba(13, 124, 102, 0.55);
+  outline-offset: 2px;
 }
 
 .itinerary-day-list__item p {
@@ -1868,6 +1843,31 @@ button:disabled {
     max-height: 3rem;
     overflow: hidden;
     align-content: flex-start;
+  }
+
+  .itinerary-day-header {
+    min-height: 3.7rem;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+
+  .itinerary-day-header__date {
+    font-size: 1.35rem;
+  }
+
+  .itinerary-day-header__weekday {
+    font-size: 0.95rem;
+  }
+
+  .itinerary-day-header__index {
+    font-size: 0.88rem;
+  }
+
+  .itinerary-day-header__edit-day-button {
+    min-width: 4.8rem;
+    min-height: 2.1rem;
+    font-size: 0.76rem;
+    padding: 0.35rem 0.72rem;
   }
 }
 
@@ -2361,13 +2361,38 @@ button:disabled {
 }
 
 .planning-section--anchored {
-  border-left: 3px solid var(--accent, #4a90d9);
+  position: relative;
   padding-left: 0.6rem;
+}
+
+.planning-section--anchored::before {
+  content: '';
+  position: absolute;
+  left: 0.5px;
+  top: 1.15rem;
+  bottom: 0;
+  width: 3px;
+  border-radius: 999px;
+  background: var(--accent, #4a90d9);
+  transform: translateX(-50%);
 }
 
 .planning-section--flexible {
   border-left: 3px solid var(--surface-border);
   padding-left: 0.6rem;
+}
+
+.planning-section__anchor-marker {
+  position: absolute;
+  left: 0.5px;
+  top: 0.2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent, #4a90d9);
+  line-height: 1;
+  pointer-events: none;
+  transform: translateX(-50%);
 }
 
 .planning-section__grip {
@@ -2458,40 +2483,6 @@ button:disabled {
   -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
-}
-
-/* ---- Anchored toggle button ---- */
-
-.anchored-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 0.15rem 0.4rem;
-  border: 1px solid var(--surface-border);
-  border-radius: 4px;
-  background: transparent;
-  font-size: 0.72rem;
-  cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.anchored-toggle:hover {
-  background: rgba(127, 85, 29, 0.08);
-}
-
-.anchored-toggle--anchored {
-  border-color: var(--accent, #4a90d9);
-  color: var(--accent, #4a90d9);
-}
-
-.anchored-toggle--flexible {
-  color: var(--text-muted);
-}
-
-.anchored-toggle__label {
-  font-weight: 500;
 }
 
 /* ============================================
@@ -2700,11 +2691,37 @@ button:disabled {
 }
 
 .day-block-editor--anchored {
-  border-left-color: var(--accent);
+  position: relative;
+  border-left: 0;
+}
+
+.day-block-editor--anchored::before {
+  content: '';
+  position: absolute;
+  left: 0.5px;
+  top: 1.15rem;
+  bottom: 0;
+  width: 3px;
+  border-radius: 999px;
+  background: var(--accent);
+  transform: translateX(-50%);
 }
 
 .day-block-editor--flexible {
   border-left-color: var(--surface-border);
+}
+
+.day-block-editor__anchor-marker {
+  position: absolute;
+  left: 0.5px;
+  top: 0.2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  line-height: 1;
+  pointer-events: none;
+  transform: translateX(-50%);
 }
 
 .day-block-editor__label {
@@ -2944,35 +2961,11 @@ button:disabled {
 
 /* ---- Activity form modal ---- */
 
-.activity-form-modal-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-3);
-  background: rgba(47, 36, 22, 0.58);
-}
-
 .activity-form-panel {
-  width: min(100%, 480px);
-  max-height: min(90vh, 600px);
-  overflow-y: auto;
-  border: 1px solid var(--surface-border);
-  border-radius: 12px;
-  padding: var(--space-3);
-  background: rgba(255, 252, 246, 0.98);
-  box-shadow: var(--shadow);
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-}
-
-.activity-form-panel__title {
-  font-size: 0.95rem;
-  font-weight: 600;
-  margin: 0;
+  padding: var(--space-3);
 }
 
 .activity-form-panel__field {
@@ -3155,32 +3148,20 @@ button:disabled {
   cursor: not-allowed;
 }
 
-.activity-form-panel__actions {
-  display: flex;
-  gap: var(--space-2);
-  margin-top: 0.25rem;
-}
-
-.activity-form-panel__actions button {
-  font-size: 0.85rem;
-  padding: 0.5rem 1rem;
+.activity-form-panel__help-text {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: var(--text-muted);
 }
 
 /* ---- Responsive planning/timeline ---- */
 
 @media (max-width: 500px) {
-  .activity-form-modal-overlay {
-    align-items: flex-start;
-    padding: max(0.75rem, env(safe-area-inset-top)) max(0.75rem, env(safe-area-inset-right)) max(0.75rem, env(safe-area-inset-bottom)) max(0.75rem, env(safe-area-inset-left));
-  }
-
   .activity-form-panel {
-    width: min(100%, 25rem);
-    max-height: calc(100dvh - 1.5rem);
-    border-radius: 14px;
     padding: 0.85rem;
     gap: 0.65rem;
-    overscroll-behavior: contain;
   }
 
   .activity-form-panel__field input,
@@ -3228,13 +3209,6 @@ button:disabled {
     min-width: 0;
   }
 
-  .activity-form-panel__actions {
-    position: sticky;
-    bottom: 0;
-    background: rgba(255, 252, 246, 0.98);
-    padding-top: 0.35rem;
-  }
-
   .itinerary-detail-panel__top-actions {
     gap: 0.05rem;
   }
@@ -3280,10 +3254,6 @@ button:disabled {
     --itinerary-day-item-pad-inline-right: max(var(--space-3), env(safe-area-inset-right));
     padding-left: var(--itinerary-day-item-pad-inline-left);
     padding-right: var(--itinerary-day-item-pad-inline-right);
-  }
-
-  .anchored-toggle__label {
-    display: none;
   }
 
   .timeline-activity {

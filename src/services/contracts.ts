@@ -52,6 +52,18 @@ export interface ApiRequestOptions {
   signal?: AbortSignal
 }
 
+export type ClientLogLevel = 'warn' | 'error'
+export type ClientLogKind = 'console' | 'window-error' | 'unhandledrejection'
+
+export interface ClientLogRequest {
+  level: ClientLogLevel
+  kind: ClientLogKind
+  message: string
+  details?: string
+  stack?: string
+  url?: string
+}
+
 export interface WebReference {
   url: string
   caption?: string
@@ -60,9 +72,20 @@ export interface WebReference {
 
 export type ActivityType = 'note' | 'flight' | 'accommodation' | 'transfer' | 'poi' | 'carRental' | 'custom' | 'food' | 'divider' | 'shopping' | 'tour'
 
+export type AccommodationPlatform = 'booking' | 'airbnb' | 'agoda' | 'direct' | 'other'
+
 export interface ActivityDetails {
   cuisine?: string
   guidanceMode?: 'selfGuided' | 'guided'
+  nights?: number
+  guests?: number
+  checkInFrom?: string
+  checkInUntil?: string
+  checkOutUntil?: string
+  platform?: AccommodationPlatform
+  contactPhone?: string
+  contactEmail?: string
+  bookingRef?: string
 }
 
 export interface ItineraryActivity {

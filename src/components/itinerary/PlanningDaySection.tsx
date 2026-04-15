@@ -3,23 +3,21 @@ import type { ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useDraggable, useDroppable } from '@dnd-kit/core'
 
-import { Star } from '@phosphor-icons/react'
+import { AnchorSimple, Star } from '@phosphor-icons/react'
 
 import type { ItineraryActivity, ItineraryDay } from '@/services/contracts'
-import { groupActivitiesForPlanning, isActivityAnchored } from '@/utils/activity-classification'
+import { groupActivitiesForPlanning } from '@/utils/activity-classification'
 import { formatLocalTimeRange } from '@/utils/date-format'
 import { ACTIVITY_TYPE_ICON, ACTIVITY_TYPE_COLOR } from './activity-presentation'
-import { AnchoredStatusToggle } from './AnchoredStatusToggle'
 
 interface PlanningDaySectionProps {
   day: ItineraryDay
-  onToggleAnchored: (activityId: string, newValue: boolean) => void
   disabled?: boolean
   totalDays: number
   dayIndex: number
 }
 
-export function PlanningDaySection({ day, onToggleAnchored, disabled, totalDays, dayIndex }: PlanningDaySectionProps): ReactElement {
+export function PlanningDaySection({ day, disabled, totalDays, dayIndex }: PlanningDaySectionProps): ReactElement {
   const { t } = useTranslation(['common'])
   const { sections, flexibleBlockCount } = groupActivitiesForPlanning(day.activities)
 
@@ -39,12 +37,18 @@ export function PlanningDaySection({ day, onToggleAnchored, disabled, totalDays,
         <Fragment key={section.type === 'anchored' ? `a-${sIdx}` : `f-${section.blockIndex}`}>
           {section.type === 'anchored' ? (
             <div className="planning-section planning-section--anchored">
+              <span
+                className="planning-section__anchor-marker"
+                aria-label={t('common:itinerary.presentation.anchored')}
+                title={t('common:itinerary.presentation.anchored')}
+              >
+                <AnchorSimple size={12} weight="bold" />
+              </span>
               <ul className="planning-section__list">
                 {section.activities.map((activity) => (
                   <PlanningActivityRow
                     key={activity.id}
                     activity={activity}
-                    onToggleAnchored={onToggleAnchored}
                     disabled={disabled}
                   />
                 ))}
@@ -59,7 +63,6 @@ export function PlanningDaySection({ day, onToggleAnchored, disabled, totalDays,
               blockCount={flexibleBlockCount}
               dividerLabel={section.dividerLabel}
               activities={section.activities}
-              onToggleAnchored={onToggleAnchored}
               disabled={disabled}
             />
           )}
@@ -92,11 +95,10 @@ interface FlexibleBlockProps {
   blockCount: number
   dividerLabel?: string
   activities: ItineraryActivity[]
-  onToggleAnchored: (activityId: string, newValue: boolean) => void
   disabled?: boolean
 }
 
-function FlexibleBlock({ dayNumber, totalDays, blockIndex, blockCount, dividerLabel, activities, onToggleAnchored, disabled }: FlexibleBlockProps): ReactElement {
+function FlexibleBlock({ dayNumber, totalDays, blockIndex, blockCount, dividerLabel, activities, disabled }: FlexibleBlockProps): ReactElement {
   const isSingleDay = totalDays <= 1
   const isSingleBlock = isSingleDay && blockCount <= 1
 
@@ -145,7 +147,6 @@ function FlexibleBlock({ dayNumber, totalDays, blockIndex, blockCount, dividerLa
           <PlanningActivityRow
             key={activity.id}
             activity={activity}
-            onToggleAnchored={onToggleAnchored}
             disabled={disabled}
           />
         ))}
@@ -158,11 +159,10 @@ function FlexibleBlock({ dayNumber, totalDays, blockIndex, blockCount, dividerLa
 
 interface PlanningActivityRowProps {
   activity: ItineraryActivity
-  onToggleAnchored: (activityId: string, newValue: boolean) => void
   disabled?: boolean
 }
 
-function PlanningActivityRow({ activity, onToggleAnchored, disabled }: PlanningActivityRowProps): ReactElement {
+function PlanningActivityRow({ activity }: PlanningActivityRowProps): ReactElement {
   const { i18n } = useTranslation(['common'])
   const typeColor = ACTIVITY_TYPE_COLOR[activity.type] ?? ACTIVITY_TYPE_COLOR.note
 
@@ -171,14 +171,9 @@ function PlanningActivityRow({ activity, onToggleAnchored, disabled }: PlanningA
       className="planning-activity"
       style={{
         background: typeColor.bg,
-        border: `2px solid ${typeColor.icon}26`,
+        border: `1px solid ${typeColor.icon}1A`,
       }}
     >
-      <AnchoredStatusToggle
-        isAnchored={isActivityAnchored(activity)}
-        onToggle={(v) => onToggleAnchored(activity.id, v)}
-        disabled={disabled}
-      />
       <span className="planning-activity__type-icon" style={{ color: typeColor.icon }}>
         {ACTIVITY_TYPE_ICON[activity.type] ?? <Star size={16} />}
       </span>

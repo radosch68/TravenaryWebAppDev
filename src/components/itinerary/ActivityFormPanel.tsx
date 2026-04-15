@@ -1,18 +1,22 @@
 import type { ReactElement } from 'react'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import type { ActivityType, ItineraryActivity } from '@/services/contracts'
+import { DialogShell } from '@/components/DialogShell'
+import type { ActivityType, AccommodationPlatform, ItineraryActivity } from '@/services/contracts'
 import { generateClientId } from '@/utils/client-id'
-import { formatLocalTime, getLocalizedTimeInputPlaceholder } from '@/utils/date-format'
+import { formatLocalDate, formatLocalTime, getLocalizedTimeInputPlaceholder } from '@/utils/date-format'
 import { ACTIVITY_TYPE_COLOR, ACTIVITY_TYPE_ICON } from './activity-presentation'
+import formStyles from './ActivityFormPanel.module.css'
 
-const FULL_EDIT_TYPES: ReadonlySet<ActivityType> = new Set(['note', 'poi', 'custom', 'carRental', 'food', 'shopping', 'tour'])
+const FULL_EDIT_TYPES: ReadonlySet<ActivityType> = new Set(['note', 'poi', 'custom', 'carRental', 'food', 'shopping', 'tour', 'accommodation'])
 const LIMITED_EDIT_FIELDS = ['title', 'text', 'time', 'timeEnd'] as const
-const CREATABLE_TYPES = ['note', 'poi', 'carRental', 'food', 'custom', 'shopping', 'tour'] as const satisfies readonly ActivityType[]
-type CreatableActivityType = (typeof CREATABLE_TYPES)[number]
 
-const ACTIVITY_TYPE_LABEL_KEY: Record<CreatableActivityType, string> = {
+const ANCHOR_ELIGIBLE_TYPES: ReadonlySet<ActivityType> = new Set([
+  'note', 'flight', 'accommodation', 'transfer', 'poi', 'carRental', 'custom', 'food', 'shopping', 'tour'
+])
+
+const ACTIVITY_TYPE_LABEL_KEY: Record<ActivityType, string> = {
   note: 'note',
   poi: 'poi',
   custom: 'custom',
@@ -20,6 +24,10 @@ const ACTIVITY_TYPE_LABEL_KEY: Record<CreatableActivityType, string> = {
   food: 'food',
   shopping: 'shopping',
   tour: 'tour',
+  accommodation: 'accommodation',
+  flight: 'flight',
+  transfer: 'transfer',
+  divider: 'divider',
 }
 
 function normalizeTimeValue(value: string): string | undefined {
@@ -50,7 +58,10 @@ function normalizeTimeValue(value: string): string | undefined {
 
 interface ActivityFormPanelProps {
   activity?: ItineraryActivity
-  mode: 'create' | 'edit'
+  activityType: ActivityType
+  owningDayDate?: string
+  createOwnBlock?: boolean
+  blockDividerTitle?: string
   onSave: (payload: ActivityFormSavePayload) => void
   onCancel: () => void
   disabled?: boolean
@@ -64,14 +75,17 @@ export interface ActivityFormSavePayload {
 
 export function ActivityFormPanel({
   activity,
-  mode,
+  activityType,
+  owningDayDate,
+  createOwnBlock = false,
+  blockDividerTitle = '',
   onSave,
   onCancel,
   disabled,
 }: ActivityFormPanelProps): ReactElement {
   const { t, i18n } = useTranslation(['common'])
-  const isCreate = mode === 'create'
-  const isFullEdit = isCreate || (activity ? FULL_EDIT_TYPES.has(activity.type) : false)
+  const isCreate = !activity
+  const isFullEdit = isCreate || FULL_EDIT_TYPES.has(activity.type)
   const timePlaceholder = getLocalizedTimeInputPlaceholder(i18n.language)
   const useNativeTimeInput = typeof window !== 'undefined'
     && window.matchMedia('(hover: none), (pointer: coarse)').matches
@@ -80,15 +94,25 @@ export function ActivityFormPanel({
     : i18n.language.startsWith('en') ? 'text' : 'numeric'
   const timeInputType = useNativeTimeInput ? 'time' : 'text'
 
-  const [type, setType] = useState<ActivityType>(activity?.type ?? 'note')
   const [title, setTitle] = useState(activity?.title ?? '')
   const [text, setText] = useState(activity?.text ?? '')
   const [time, setTime] = useState(() => useNativeTimeInput ? (activity?.time ?? '') : formatLocalTime(activity?.time, i18n.language))
   const [timeEnd, setTimeEnd] = useState(() => useNativeTimeInput ? (activity?.timeEnd ?? '') : formatLocalTime(activity?.timeEnd, i18n.language))
   const [cuisine, setCuisine] = useState(activity?.details?.cuisine ?? '')
   const [guidanceMode, setGuidanceMode] = useState<'selfGuided' | 'guided'>(activity?.details?.guidanceMode ?? 'selfGuided')
-  const [createOwnBlock, setCreateOwnBlock] = useState(false)
-  const [dividerTitle, setDividerTitle] = useState('')
+  const [anchorToDay, setAnchorToDay] = useState(() => {
+    if (isCreate) return false
+    return typeof activity?.anchorDate === 'string' && activity.anchorDate.length > 0
+  })
+  const [nightsInput, setNightsInput] = useState(() => (activity?.details?.nights ?? 1).toString())
+  const [guestsInput, setGuestsInput] = useState(() => activity?.details?.guests?.toString() ?? '')
+  const [checkInFrom, setCheckInFrom] = useState(() => useNativeTimeInput ? (activity?.details?.checkInFrom ?? '') : formatLocalTime(activity?.details?.checkInFrom, i18n.language))
+  const [checkInUntil, setCheckInUntil] = useState(() => useNativeTimeInput ? (activity?.details?.checkInUntil ?? '') : formatLocalTime(activity?.details?.checkInUntil, i18n.language))
+  const [checkOutUntil, setCheckOutUntil] = useState(() => useNativeTimeInput ? (activity?.details?.checkOutUntil ?? '') : formatLocalTime(activity?.details?.checkOutUntil, i18n.language))
+  const [platform, setPlatform] = useState<AccommodationPlatform | ''>(activity?.details?.platform ?? '')
+  const [contactPhone, setContactPhone] = useState(activity?.details?.contactPhone ?? '')
+  const [contactEmail, setContactEmail] = useState(activity?.details?.contactEmail ?? '')
+  const [bookingRef, setBookingRef] = useState(activity?.details?.bookingRef ?? '')
   const timeInputRef = useRef<HTMLInputElement | null>(null)
   const timeEndInputRef = useRef<HTMLInputElement | null>(null)
 
@@ -106,23 +130,46 @@ export function ActivityFormPanel({
     const liveTime = normalizeTimeValue(timeInputRef.current?.value ?? time)
     const liveTimeEnd = normalizeTimeValue(timeEndInputRef.current?.value ?? timeEnd)
 
-    const activeType = isCreate ? type : activity!.type
+    // Preserve existing anchor state when this form cannot safely edit anchoring.
+    const isAnchorEligible = ANCHOR_ELIGIBLE_TYPES.has(activityType)
+    const canEditAnchoring = isAnchorEligible && Boolean(owningDayDate)
+    let resolvedAnchorDate: string | null = activity?.anchorDate ?? null
+    if (canEditAnchoring) {
+      resolvedAnchorDate = anchorToDay ? owningDayDate ?? null : null
+    }
 
     const result: ItineraryActivity = {
       id: activity?.id ?? generateClientId(),
-      type: activeType,
+      type: activityType,
       title: title.trim(),
+      anchorDate: resolvedAnchorDate,
       ...(text.trim() ? { text: text.trim() } : {}),
       ...(liveTime ? { time: liveTime } : {}),
       ...(liveTimeEnd ? { timeEnd: liveTimeEnd } : {}),
-      ...(activity?.anchorDate ? { anchorDate: activity.anchorDate } : {}),
     }
 
     // Build type-specific details
-    if (activeType === 'food') {
+    if (activityType === 'food') {
       result.details = cuisine.trim() ? { cuisine: cuisine.trim() } : {}
-    } else if (activeType === 'tour') {
+    } else if (activityType === 'tour') {
       result.details = { guidanceMode }
+    } else if (activityType === 'accommodation') {
+      const parsedNights = parseInt(nightsInput, 10)
+      const normalizedNights = Number.isFinite(parsedNights) && parsedNights >= 1 ? parsedNights : 1
+      const accDetails: ItineraryActivity['details'] = { nights: normalizedNights }
+      const parsedGuests = parseInt(guestsInput, 10)
+      if (!isNaN(parsedGuests) && parsedGuests >= 1) accDetails!.guests = parsedGuests
+      const normCheckInFrom = normalizeTimeValue(checkInFrom)
+      if (normCheckInFrom) accDetails!.checkInFrom = normCheckInFrom
+      const normCheckInUntil = normalizeTimeValue(checkInUntil)
+      if (normCheckInUntil) accDetails!.checkInUntil = normCheckInUntil
+      const normCheckOutUntil = normalizeTimeValue(checkOutUntil)
+      if (normCheckOutUntil) accDetails!.checkOutUntil = normCheckOutUntil
+      if (platform) accDetails!.platform = platform as AccommodationPlatform
+      if (contactPhone.trim()) accDetails!.contactPhone = contactPhone.trim()
+      if (contactEmail.trim()) accDetails!.contactEmail = contactEmail.trim()
+      if (bookingRef.trim()) accDetails!.bookingRef = bookingRef.trim()
+      result.details = accDetails
     } else if (activity?.details) {
       result.details = activity.details
     }
@@ -134,109 +181,39 @@ export function ActivityFormPanel({
     onSave({
       activity: result,
       createOwnBlock: isCreate ? createOwnBlock : false,
-      dividerTitle: isCreate ? dividerTitle.trim() : '',
+      dividerTitle: isCreate ? blockDividerTitle : '',
     })
   }
 
-  const handleEscape = useCallback((e: KeyboardEvent): void => {
-    if (e.key === 'Escape') onCancel()
-  }, [onCancel])
+  const typeColor = ACTIVITY_TYPE_COLOR[activityType]
 
-  useEffect(() => {
-    window.addEventListener('keydown', handleEscape)
-    return () => window.removeEventListener('keydown', handleEscape)
-  }, [handleEscape])
-
-  const handleOverlayClick = useCallback((e: React.MouseEvent<HTMLDivElement>): void => {
-    if (e.target === e.currentTarget) onCancel()
-  }, [onCancel])
+  const typeBadge = (
+    <span
+      className={formStyles.typeBadge}
+      style={{ background: typeColor.bg, color: typeColor.icon, borderColor: `${typeColor.icon}26` }}
+    >
+      <span className={formStyles.typeBadgeIcon}>{ACTIVITY_TYPE_ICON[activityType]}</span>
+      <span>{t(`common:itinerary.dayEditor.activityTypeOptions.${ACTIVITY_TYPE_LABEL_KEY[activityType]}`)}</span>
+    </span>
+  )
 
   return (
-    <div
-      className="activity-form-modal-overlay"
-      role="dialog"
-      aria-modal="true"
-      aria-label={isCreate ? t('common:itinerary.dayEditor.newActivity') : t('common:itinerary.dayEditor.editActivity')}
-      onClick={handleOverlayClick}
+    <DialogShell
+      title={typeBadge}
+      onClose={onCancel}
+      className={formStyles.modal}
+      footer={
+        <button
+          type="button"
+          className="button-primary"
+          onClick={handleSubmit}
+          disabled={disabled || !title.trim()}
+        >
+          {t('common:save')}
+        </button>
+      }
     >
     <div className="activity-form-panel">
-      <h3 className="activity-form-panel__title">
-        {isCreate ? t('common:itinerary.dayEditor.newActivity') : t('common:itinerary.dayEditor.editActivity')}
-      </h3>
-
-      {isCreate && (
-        <div className="activity-form-panel__field">
-          <div className="activity-form-panel__type-grid" role="radiogroup" aria-label={t('common:itinerary.dayEditor.activityType')}>
-            {CREATABLE_TYPES.map((activityType) => {
-              const typeColor = ACTIVITY_TYPE_COLOR[activityType] ?? ACTIVITY_TYPE_COLOR.note
-              const isSelected = type === activityType
-
-              return (
-                <button
-                  key={activityType}
-                  type="button"
-                  className={`activity-form-panel__type-option${isSelected ? ' activity-form-panel__type-option--selected' : ''}`}
-                  style={{
-                    background: typeColor.bg,
-                                  border: `2px solid ${typeColor.icon}26`,
-                    color: typeColor.icon,
-                  }}
-                  onClick={() => setType(activityType)}
-                  disabled={disabled}
-                  role="radio"
-                  aria-checked={isSelected}
-                  aria-label={t(`common:itinerary.dayEditor.activityTypeOptions.${ACTIVITY_TYPE_LABEL_KEY[activityType]}`)}
-                  autoFocus={activityType === type}
-                >
-                  {isSelected ? (
-                    <span
-                      className="activity-form-panel__type-option-check"
-                      aria-hidden="true"
-                      style={{ backgroundColor: typeColor.icon }}
-                    >
-                      ✓
-                    </span>
-                  ) : null}
-                  <span className="activity-form-panel__type-option-icon" aria-hidden="true">
-                    {ACTIVITY_TYPE_ICON[activityType]}
-                  </span>
-                  <span className="activity-form-panel__type-option-label">
-                    {t(`common:itinerary.dayEditor.activityTypeOptions.${ACTIVITY_TYPE_LABEL_KEY[activityType]}`)}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-        </div>
-      )}
-
-      {isCreate && (
-        <div className="activity-form-panel__block-option">
-          <label className="activity-form-panel__checkbox" htmlFor="activity-create-own-block">
-            <input
-              id="activity-create-own-block"
-              type="checkbox"
-              checked={createOwnBlock}
-              onChange={(e) => setCreateOwnBlock(e.target.checked)}
-              disabled={disabled}
-            />
-            <span className="activity-form-panel__checkbox-indicator" aria-hidden="true">
-              <span className="activity-form-panel__checkbox-indicator-mark">✓</span>
-            </span>
-            <span>{t('common:itinerary.dayEditor.createOwnBlock')}</span>
-          </label>
-          <input
-            id="activity-divider-title"
-            className="activity-form-panel__block-option-input"
-            type="text"
-            value={dividerTitle}
-            onChange={(e) => setDividerTitle(e.target.value)}
-            placeholder={t('common:itinerary.dayEditor.blockTitlePlaceholder')}
-            aria-label={t('common:itinerary.dayEditor.blockTitle')}
-            disabled={disabled || !createOwnBlock}
-          />
-        </div>
-      )}
 
       <div className="activity-form-panel__field">
         <label htmlFor="activity-title">{t('common:itinerary.dayEditor.fieldTitle')}</label>
@@ -246,7 +223,7 @@ export function ActivityFormPanel({
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           disabled={disabled}
-          autoFocus={!isCreate}
+          autoFocus
         />
       </div>
 
@@ -263,40 +240,42 @@ export function ActivityFormPanel({
         </div>
       )}
 
-      <div className="activity-form-panel__field-row activity-form-panel__field-row--time">
-        <div className="activity-form-panel__field">
-          <label htmlFor="activity-time">{t('common:itinerary.dayEditor.fieldTime')}</label>
-          <input
-            id="activity-time"
-            ref={timeInputRef}
-            type={timeInputType}
-            value={time}
-            onChange={(e) => handleTimeInput(e.target.value)}
-            inputMode={timeInputMode}
-            placeholder={useNativeTimeInput ? undefined : timePlaceholder}
-            autoComplete="off"
-            disabled={disabled}
-            step={useNativeTimeInput ? 60 : undefined}
-          />
+      {activityType !== 'accommodation' && (
+        <div className="activity-form-panel__field-row activity-form-panel__field-row--time">
+          <div className="activity-form-panel__field">
+            <label htmlFor="activity-time">{t('common:itinerary.dayEditor.fieldTime')}</label>
+            <input
+              id="activity-time"
+              ref={timeInputRef}
+              type={timeInputType}
+              value={time}
+              onChange={(e) => handleTimeInput(e.target.value)}
+              inputMode={timeInputMode}
+              placeholder={useNativeTimeInput ? undefined : timePlaceholder}
+              autoComplete="off"
+              disabled={disabled}
+              step={useNativeTimeInput ? 60 : undefined}
+            />
+          </div>
+          <div className="activity-form-panel__field">
+            <label htmlFor="activity-time-end">{t('common:itinerary.dayEditor.fieldTimeEnd')}</label>
+            <input
+              id="activity-time-end"
+              ref={timeEndInputRef}
+              type={timeInputType}
+              value={timeEnd}
+              onChange={(e) => handleTimeEndInput(e.target.value)}
+              inputMode={timeInputMode}
+              placeholder={useNativeTimeInput ? undefined : timePlaceholder}
+              autoComplete="off"
+              disabled={disabled}
+              step={useNativeTimeInput ? 60 : undefined}
+            />
+          </div>
         </div>
-        <div className="activity-form-panel__field">
-          <label htmlFor="activity-time-end">{t('common:itinerary.dayEditor.fieldTimeEnd')}</label>
-          <input
-            id="activity-time-end"
-            ref={timeEndInputRef}
-            type={timeInputType}
-            value={timeEnd}
-            onChange={(e) => handleTimeEndInput(e.target.value)}
-            inputMode={timeInputMode}
-            placeholder={useNativeTimeInput ? undefined : timePlaceholder}
-            autoComplete="off"
-            disabled={disabled}
-            step={useNativeTimeInput ? 60 : undefined}
-          />
-        </div>
-      </div>
+      )}
 
-      {(type === 'food' || activity?.type === 'food') && (
+      {activityType === 'food' && (
         <div className="activity-form-panel__field">
           <label htmlFor="activity-cuisine">{t('common:itinerary.dayEditor.fieldCuisine')}</label>
           <input
@@ -309,7 +288,7 @@ export function ActivityFormPanel({
         </div>
       )}
 
-      {(type === 'tour' || activity?.type === 'tour') && (
+      {activityType === 'tour' && (
         <div className="activity-form-panel__field">
           <label htmlFor="activity-guidance-mode">{t('common:itinerary.dayEditor.fieldGuidanceMode')}</label>
           <select
@@ -324,24 +303,180 @@ export function ActivityFormPanel({
         </div>
       )}
 
-      <div className="activity-form-panel__actions">
-        <button
-          type="button"
-          className="button-primary"
-          onClick={handleSubmit}
-          disabled={disabled || !title.trim()}
-        >
-          {t('common:save')}
-        </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          disabled={disabled}
-        >
-          {t('common:cancel')}
-        </button>
-      </div>
+      {/* Accommodation-specific fields */}
+      {activityType === 'accommodation' && (
+        <>
+          <div className="activity-form-panel__field-row activity-form-panel__field-row--time">
+            <div className="activity-form-panel__field">
+              <label htmlFor="activity-nights">{t('common:itinerary.dayEditor.fieldNights')}</label>
+              <input
+                id="activity-nights"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                value={nightsInput}
+                onChange={(e) => {
+                  const raw = e.target.value
+                  if (/^\d*$/.test(raw)) {
+                    setNightsInput(raw)
+                  }
+                }}
+                onBlur={() => {
+                  const parsed = parseInt(nightsInput, 10)
+                  if (!Number.isFinite(parsed) || parsed < 1) {
+                    setNightsInput('1')
+                    return
+                  }
+
+                  setNightsInput(String(parsed))
+                }}
+                disabled={disabled}
+              />
+            </div>
+            <div className="activity-form-panel__field">
+              <label htmlFor="activity-guests">{t('common:itinerary.dayEditor.fieldGuests')}</label>
+              <input
+                id="activity-guests"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                value={guestsInput}
+                onChange={(e) => {
+                  const raw = e.target.value
+                  if (/^\d*$/.test(raw)) setGuestsInput(raw)
+                }}
+                onBlur={() => {
+                  const parsed = parseInt(guestsInput, 10)
+                  if (!Number.isFinite(parsed) || parsed < 1) {
+                    setGuestsInput('')
+                    return
+                  }
+                  setGuestsInput(String(parsed))
+                }}
+                disabled={disabled}
+              />
+            </div>
+          </div>
+
+          <div className="activity-form-panel__field-row activity-form-panel__field-row--time">
+            <div className="activity-form-panel__field">
+              <label htmlFor="activity-checkin-from">{t('common:itinerary.dayEditor.fieldCheckInFrom')}</label>
+              <input
+                id="activity-checkin-from"
+                type={timeInputType}
+                value={checkInFrom}
+                onChange={(e) => setCheckInFrom(e.target.value)}
+                inputMode={timeInputMode}
+                placeholder={useNativeTimeInput ? undefined : timePlaceholder}
+                autoComplete="off"
+                disabled={disabled}
+                step={useNativeTimeInput ? 60 : undefined}
+              />
+            </div>
+            <div className="activity-form-panel__field">
+              <label htmlFor="activity-checkin-until">{t('common:itinerary.dayEditor.fieldCheckInUntil')}</label>
+              <input
+                id="activity-checkin-until"
+                type={timeInputType}
+                value={checkInUntil}
+                onChange={(e) => setCheckInUntil(e.target.value)}
+                inputMode={timeInputMode}
+                placeholder={useNativeTimeInput ? undefined : timePlaceholder}
+                autoComplete="off"
+                disabled={disabled}
+                step={useNativeTimeInput ? 60 : undefined}
+              />
+            </div>
+          </div>
+
+          <div className="activity-form-panel__field">
+            <label htmlFor="activity-checkout-until">{t('common:itinerary.dayEditor.fieldCheckOutUntil')}</label>
+            <input
+              id="activity-checkout-until"
+              type={timeInputType}
+              value={checkOutUntil}
+              onChange={(e) => setCheckOutUntil(e.target.value)}
+              inputMode={timeInputMode}
+              placeholder={useNativeTimeInput ? undefined : timePlaceholder}
+              autoComplete="off"
+              disabled={disabled}
+              step={useNativeTimeInput ? 60 : undefined}
+            />
+          </div>
+
+          <div className="activity-form-panel__field">
+            <label htmlFor="activity-platform">{t('common:itinerary.dayEditor.fieldPlatform')}</label>
+            <select
+              id="activity-platform"
+              value={platform}
+              onChange={(e) => setPlatform(e.target.value as AccommodationPlatform | '')}
+              disabled={disabled}
+            >
+              <option value="">—</option>
+              <option value="booking">{t('common:itinerary.dayEditor.platformOptions.booking')}</option>
+              <option value="airbnb">{t('common:itinerary.dayEditor.platformOptions.airbnb')}</option>
+              <option value="agoda">{t('common:itinerary.dayEditor.platformOptions.agoda')}</option>
+              <option value="direct">{t('common:itinerary.dayEditor.platformOptions.direct')}</option>
+              <option value="other">{t('common:itinerary.dayEditor.platformOptions.other')}</option>
+            </select>
+          </div>
+
+          <div className="activity-form-panel__field">
+            <label htmlFor="activity-contact-phone">{t('common:itinerary.dayEditor.fieldContactPhone')}</label>
+            <input
+              id="activity-contact-phone"
+              type="tel"
+              value={contactPhone}
+              onChange={(e) => setContactPhone(e.target.value)}
+              disabled={disabled}
+            />
+          </div>
+
+          <div className="activity-form-panel__field">
+            <label htmlFor="activity-contact-email">{t('common:itinerary.dayEditor.fieldContactEmail')}</label>
+            <input
+              id="activity-contact-email"
+              type="email"
+              value={contactEmail}
+              onChange={(e) => setContactEmail(e.target.value)}
+              disabled={disabled}
+            />
+          </div>
+
+          <div className="activity-form-panel__field">
+            <label htmlFor="activity-booking-ref">{t('common:itinerary.dayEditor.fieldBookingRef')}</label>
+            <input
+              id="activity-booking-ref"
+              type="text"
+              value={bookingRef}
+              onChange={(e) => setBookingRef(e.target.value)}
+              disabled={disabled}
+            />
+          </div>
+        </>
+      )}
+
+      {/* Anchor control — common for all anchor-eligible types */}
+      {ANCHOR_ELIGIBLE_TYPES.has(activityType) && owningDayDate && (
+        <div className="activity-form-panel__block-option">
+          <label className="activity-form-panel__checkbox" htmlFor="activity-anchor-to-day">
+            <input
+              id="activity-anchor-to-day"
+              type="checkbox"
+              checked={anchorToDay}
+              onChange={(e) => setAnchorToDay(e.target.checked)}
+              disabled={disabled}
+            />
+            <span className="activity-form-panel__checkbox-indicator" aria-hidden="true">
+              <span className="activity-form-panel__checkbox-indicator-mark">✓</span>
+            </span>
+            <span>{t('common:itinerary.dayEditor.anchorToDay', { date: formatLocalDate(owningDayDate, i18n.language) })}</span>
+          </label>
+          <p className="activity-form-panel__help-text">{t('common:itinerary.dayEditor.anchorHelp')}</p>
+        </div>
+      )}
+
     </div>
-    </div>
+    </DialogShell>
   )
 }

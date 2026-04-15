@@ -1,0 +1,31 @@
+.modal {
+  width: min(100%, 480px);
+  max-height: min(90vh, 600px);
+}
+
+.typeBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.65rem;
+  border-radius: 8px;
+  border: 2px solid;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.typeBadgeIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 500px) {
+  .modal {
+    width: min(100%, 25rem);
+    max-height: calc(100dvh - 1.5rem);
+    border-radius: 14px;
+  }
+}

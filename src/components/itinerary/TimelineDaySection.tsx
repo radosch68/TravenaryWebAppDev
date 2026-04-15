@@ -42,7 +42,7 @@ function TimelineActivityRow({ activity, t }: { activity: ItineraryActivity; t: 
       className="timeline-activity"
       style={{
         background: typeColor.bg,
-        border: `2px solid ${typeColor.icon}26`,
+        border: `1px solid ${typeColor.icon}1A`,
       }}
     >
       <span className="timeline-activity__time">

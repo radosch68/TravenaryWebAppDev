@@ -58,31 +58,6 @@ export function ItineraryDetailPage(): ReactElement {
     [itinerary, patchItinerary],
   )
 
-  const handleToggleAnchored = useCallback(
-    (dayNumber: number, activityId: string, newValue: boolean) => {
-      if (!itinerary) return
-      const day = itinerary.days.find((d) => d.dayNumber === dayNumber)
-      if (!day) return
-      const newAnchorDate = newValue ? (day.date ?? null) : null
-      const updatedDays = itinerary.days.map((d) => {
-        if (d.dayNumber !== dayNumber) return d
-        return {
-          ...d,
-          activities: d.activities.map((a) =>
-            a.id === activityId ? { ...a, anchorDate: newAnchorDate } : a,
-          ),
-        }
-      })
-      const previousDays = itinerary.days
-      setItinerary((prev) => prev ? { ...prev, days: updatedDays } : prev)
-      const daysPayload = buildDayPayload(updatedDays)
-      void patchItinerary({ days: daysPayload }).catch(() => {
-        setItinerary((prev) => prev ? { ...prev, days: previousDays } : prev)
-      })
-    },
-    [itinerary, patchItinerary],
-  )
-
   const loadDetail = useCallback(async (): Promise<void> => {
     if (!itineraryId) {
       setState('not-found')
@@ -183,6 +158,21 @@ export function ItineraryDetailPage(): ReactElement {
   const handleNavigateBackToDashboard = useCallback((): void => {
     navigate(dashboardReturnUrl)
   }, [dashboardReturnUrl, navigate])
+
+  const handleOpenDayDetail = useCallback((dayNumber: number): void => {
+    if (!itineraryId) {
+      return
+    }
+
+    const scrollStorageKey = `itinerary-detail-scroll:${itineraryId}`
+    try {
+      window.sessionStorage.setItem(scrollStorageKey, String(window.scrollY))
+    } catch {
+      // Ignore storage errors and continue navigation.
+    }
+
+    navigate(`/itineraries/${itineraryId}/days/${dayNumber}`)
+  }, [itineraryId, navigate])
 
   if (state === 'loading') {
     return (
@@ -522,11 +512,10 @@ export function ItineraryDetailPage(): ReactElement {
           <ItineraryPlanningView
             itinerary={itinerary}
             onReorder={handlePlanningReorder}
-            onToggleAnchored={handleToggleAnchored}
             reorderError={reorderError}
           />
         ) : (
-          <ItineraryTimelineView itinerary={itinerary} />
+          <ItineraryTimelineView itinerary={itinerary} onOpenDay={handleOpenDayDetail} />
         )}
 
         {reorderError && presentationMode !== 'planning' ? <p className="error">{t('common:itinerary.edit.saveFailed')}</p> : null}

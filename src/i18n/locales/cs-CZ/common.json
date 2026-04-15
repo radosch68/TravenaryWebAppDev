@@ -1,8 +1,10 @@
 {
   "submit": "Odeslat",
+  "close": "Zavřít",
   "cancel": "Zrušit",
   "save": "Uložit",
   "back": "Zpět",
+  "next": "Další",
   "avatarAlt": "Profilová fotka",
   "avatarAriaLabel": "Otevřít menu profilu",
   "loading": "Načítání...",
@@ -84,6 +86,7 @@
     "days": {
       "expand": "Rozbalit den",
       "collapse": "Sbalit den",
+      "editDay": "Upravit den",
       "openDetail": "Zobrazit detail dne",
       "noActivities": "Zatím žádné aktivity",
       "activityCount_one": "{{count}} aktivita",
@@ -113,6 +116,7 @@
       "summaryPlaceholder": "Shrnutí dne…",
       "addActivity": "Přidat aktivitu",
       "newActivity": "Nová aktivita",
+      "chooseActivityType": "Vyberte typ aktivity",
       "editActivity": "Upravit aktivitu",
       "deleteActivity": "Smazat aktivitu",
       "moveUp": "Posunout výše",
@@ -125,7 +129,17 @@
         "carRental": "Pronájem auta",
         "food": "Jídlo",
         "shopping": "Nákupy",
-        "tour": "Prohlídka"
+        "tour": "Prohlídka",
+        "accommodation": "Ubytování",
+        "flight": "Let",
+        "transfer": "Přesun",
+        "divider": "Oddělovač"
+      },
+      "activityTypeGroups": {
+        "transport": "Doprava",
+        "stayAndPlaces": "Ubytování a místa",
+        "activities": "Aktivity",
+        "notesAndCustom": "Ostatní"
       },
       "fieldTitle": "Název",
       "fieldText": "Popis",
@@ -135,6 +149,24 @@
       "fieldGuidanceMode": "Průvodce",
       "guidanceModeSelfGuided": "Na vlastní pěst",
       "guidanceModeGuided": "S průvodcem",
+      "anchorToDay": "Ukotvit k tomuto dni ({{date}})",
+      "anchorHelp": "Ukotvené aktivity zůstanou na tomto datu, když se změní datum zahájení cesty.",
+      "fieldNights": "Počet nocí",
+      "fieldGuests": "Počet osob",
+      "fieldCheckInFrom": "Check-in od",
+      "fieldCheckInUntil": "Check-in do",
+      "fieldCheckOutUntil": "Check-out do",
+      "fieldPlatform": "Platforma",
+      "fieldContactPhone": "Kontaktní telefon",
+      "fieldContactEmail": "Kontaktní e-mail",
+      "fieldBookingRef": "Číslo rezervace",
+      "platformOptions": {
+        "booking": "Booking.com",
+        "airbnb": "Airbnb",
+        "agoda": "Agoda",
+        "direct": "Přímá",
+        "other": "Jiná"
+      },
       "createOwnBlock": "Vytvořit nový blok aktivit:",
       "blockTitle": "Název bloku aktivit",
       "blockTitlePlaceholder": "Název bloku…",
@@ -142,7 +174,7 @@
       "breakBlock": "Rozdělit na aktivity",
       "moveToBlock": "Přesunout do bloku",
       "saveFailed": "Nepodařilo se uložit změny dne. Váš koncept je zachován.",
-      "editDayHint": "Klepněte na den pro úpravu aktivit"
+      "editDayHint": "Pro úpravu aktivit použijte Upravit den"
     },
     "presentation": {
       "planning": "Plánování",

@@ -2,7 +2,7 @@ import { Fragment, useState } from 'react'
 import type { ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useDroppable } from '@dnd-kit/core'
-import { Plus, Axe, PencilSimple } from '@phosphor-icons/react'
+import { AnchorSimple, Plus, Axe, PencilSimple } from '@phosphor-icons/react'
 
 import type { PlanningSection } from '@/utils/activity-classification'
 import { ActivityEditorRow } from './ActivityEditorRow'
@@ -67,6 +67,15 @@ export function DayBlockEditor({
 
   return (
     <div className={`day-block-editor${isAnchored ? ' day-block-editor--anchored' : ' day-block-editor--flexible'}`}>
+      {isAnchored && (
+        <span
+          className="day-block-editor__anchor-marker"
+          aria-label={t('common:itinerary.presentation.anchored')}
+          title={t('common:itinerary.presentation.anchored')}
+        >
+          <AnchorSimple size={12} weight="bold" />
+        </span>
+      )}
       {hasDividerMarker && (
         <div className="day-block-editor__label">
           {editingLabel ? (

@@ -1,8 +1,8 @@
 import type { ReactElement } from 'react'
 import {
   AirplaneTilt,
-  Bed,
   Bus,
+  HouseLine,
   Car,
   Compass,
   ForkKnife,
@@ -17,7 +17,7 @@ import type { ActivityType } from '@/services/contracts'
 
 export const ACTIVITY_TYPE_ICON: Record<ActivityType, ReactElement> = {
   flight: <AirplaneTilt size={18} />,
-  accommodation: <Bed size={18} />,
+  accommodation: <HouseLine size={18} />,
   transfer: <Bus size={18} />,
   poi: <MapPin size={18} />,
   carRental: <Car size={18} />,

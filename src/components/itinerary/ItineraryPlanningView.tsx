@@ -20,11 +20,10 @@ import { PlanningDaySection } from './PlanningDaySection'
 interface ItineraryPlanningViewProps {
   itinerary: ItineraryDetail
   onReorder: (days: ItineraryDay[]) => void
-  onToggleAnchored: (dayNumber: number, activityId: string, newValue: boolean) => void
   reorderError?: boolean
 }
 
-export function ItineraryPlanningView({ itinerary, onReorder, onToggleAnchored, reorderError }: ItineraryPlanningViewProps): ReactElement {
+export function ItineraryPlanningView({ itinerary, onReorder, reorderError }: ItineraryPlanningViewProps): ReactElement {
   const { t } = useTranslation(['common'])
 
   const sensors = useSensors(
@@ -132,7 +131,6 @@ export function ItineraryPlanningView({ itinerary, onReorder, onToggleAnchored, 
               index={index}
               itineraryId={itinerary.id}
               totalDays={itinerary.days.length}
-              onToggleAnchored={onToggleAnchored}
             />
           ))}
         </ul>
@@ -150,10 +148,9 @@ interface DayRowProps {
   index: number
   itineraryId: string
   totalDays: number
-  onToggleAnchored: (dayNumber: number, activityId: string, newValue: boolean) => void
 }
 
-function DayRow({ day, index, itineraryId, totalDays, onToggleAnchored }: DayRowProps): ReactElement {
+function DayRow({ day, index, itineraryId, totalDays }: DayRowProps): ReactElement {
   const { t, i18n } = useTranslation(['common'])
   const navigate = useNavigate()
   const scrollStorageKey = `itinerary-detail-scroll:${itineraryId}`
@@ -168,44 +165,37 @@ function DayRow({ day, index, itineraryId, totalDays, onToggleAnchored }: DayRow
     navigate(`/itineraries/${itineraryId}/days/${day.dayNumber}`)
   }, [day.dayNumber, itineraryId, navigate, scrollStorageKey])
 
-  const handleClick = useCallback((e: React.MouseEvent<HTMLLIElement>) => {
-    // Let interactive children (buttons, drag handles) handle their own clicks
-    const target = e.target as HTMLElement
-    if (target.closest('button, [data-dnd-handle], .planning-section__grip')) return
-    navigateToDay()
-  }, [navigateToDay])
-
   return (
     <li
       className={`itinerary-day-list__item itinerary-day-list__item--${index % 2 === 0 ? 'odd' : 'even'}`}
-      onClick={handleClick}
-      style={{ cursor: 'pointer' }}
-      role="link"
-      tabIndex={0}
-      onKeyDown={(e) => {
-        if (e.key !== 'Enter' && e.key !== ' ') {
-          return
-        }
-
-        const target = e.target as HTMLElement
-        if (target.closest('button, [data-dnd-handle], .planning-section__grip')) {
-          return
-        }
-
-        e.preventDefault()
-        navigateToDay()
-      }}
     >
-      <div className="itinerary-day-header">
-        <span className="itinerary-day-header__weekday">
-          {day.date ? formatWeekday(day.date, i18n.language) : '—'}
-        </span>
-        <span className="itinerary-day-header__date" style={{ whiteSpace: 'nowrap' }}>
+      <div
+        className="itinerary-day-header"
+      >
+        <div className="itinerary-day-header__left">
+          <span className="itinerary-day-header__weekday">
+            {day.date ? formatWeekday(day.date, i18n.language) : '—'}
+          </span>
+          <span className="itinerary-day-header__index">
+            {t('common:itinerary.dayNumber', { dayNumber: day.dayNumber })}
+          </span>
+        </div>
+        <span className="itinerary-day-header__date">
           {day.date ? formatLocalDate(day.date, i18n.language) : t('common:itinerary.missingDate')}
         </span>
-        <span className="itinerary-day-header__index">
-          {t('common:itinerary.dayNumber', { dayNumber: day.dayNumber })}
-        </span>
+        <div className="itinerary-day-header__actions">
+          <button
+            type="button"
+            className="itinerary-day-header__edit-day-button"
+            onClick={(e) => {
+              e.stopPropagation()
+              navigateToDay()
+            }}
+            aria-label={t('common:itinerary.days.editDay')}
+          >
+            {t('common:itinerary.days.editDay')}
+          </button>
+        </div>
       </div>
       {day.summary ? <p className="itinerary-day-summary">{day.summary}</p> : null}
 
@@ -213,7 +203,6 @@ function DayRow({ day, index, itineraryId, totalDays, onToggleAnchored }: DayRow
         day={day}
         dayIndex={index}
         totalDays={totalDays}
-        onToggleAnchored={(activityId, newValue) => onToggleAnchored(day.dayNumber, activityId, newValue)}
       />
     </li>
   )

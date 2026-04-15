@@ -1,8 +1,10 @@
 {
   "submit": "Submit",
+  "close": "Close",
   "cancel": "Cancel",
   "save": "Save",
   "back": "Back",
+  "next": "Next",
   "avatarAlt": "Profile photo",
   "avatarAriaLabel": "Open profile menu",
   "loading": "Loading...",
@@ -82,6 +84,7 @@
     "days": {
       "expand": "Expand day",
       "collapse": "Collapse day",
+      "editDay": "Edit day",
       "openDetail": "View day detail",
       "noActivities": "No activities yet",
       "activityCount_one": "{{count}} activity",
@@ -110,6 +113,7 @@
       "summaryPlaceholder": "Day summary…",
       "addActivity": "Add activity",
       "newActivity": "New activity",
+      "chooseActivityType": "Choose activity type",
       "editActivity": "Edit activity",
       "deleteActivity": "Delete activity",
       "moveUp": "Move up",
@@ -122,7 +126,17 @@
         "carRental": "Car rental",
         "food": "Food",
         "shopping": "Shopping",
-        "tour": "Tour"
+        "tour": "Tour",
+        "accommodation": "Accommodation",
+        "flight": "Flight",
+        "transfer": "Transfer",
+        "divider": "Divider"
+      },
+      "activityTypeGroups": {
+        "transport": "Transport",
+        "stayAndPlaces": "Stay and places",
+        "activities": "Activities",
+        "notesAndCustom": "Other"
       },
       "fieldTitle": "Title",
       "fieldText": "Description",
@@ -132,6 +146,24 @@
       "fieldGuidanceMode": "Guidance",
       "guidanceModeSelfGuided": "Self-guided",
       "guidanceModeGuided": "Guided",
+      "anchorToDay": "Anchor to this day ({{date}})",
+      "anchorHelp": "Anchored activities stay on this date when the trip start date changes.",
+      "fieldNights": "Nights",
+      "fieldGuests": "Guests",
+      "fieldCheckInFrom": "Check-in from",
+      "fieldCheckInUntil": "Check-in until",
+      "fieldCheckOutUntil": "Check-out until",
+      "fieldPlatform": "Platform",
+      "fieldContactPhone": "Contact phone",
+      "fieldContactEmail": "Contact email",
+      "fieldBookingRef": "Booking reference",
+      "platformOptions": {
+        "booking": "Booking.com",
+        "airbnb": "Airbnb",
+        "agoda": "Agoda",
+        "direct": "Direct",
+        "other": "Other"
+      },
       "createOwnBlock": "Create a new activity block:",
       "blockTitle": "Activity block title",
       "blockTitlePlaceholder": "Block title…",
@@ -139,7 +171,7 @@
       "breakBlock": "Break into activities",
       "moveToBlock": "Move to block",
       "saveFailed": "Could not save day changes. Your draft is preserved.",
-      "editDayHint": "Tap a day to edit its activities"
+      "editDayHint": "Use Edit day to update activities"
     },
     "presentation": {
       "planning": "Planning",

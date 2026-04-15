@@ -12,7 +12,7 @@ const DEFAULT_TIMEOUT_MS = 15_000
 let authHandlers: ApiAuthHandlers | undefined
 let refreshInFlight: Promise<AuthTokens> | null = null
 
-function baseUrl(): string {
+export function apiBaseUrl(): string {
   const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL
   if (configuredBaseUrl) {
     const normalizedConfiguredBaseUrl = configuredBaseUrl.replace(/\/$/, '')
@@ -68,6 +68,10 @@ export function configureApiClientAuthHandlers(handlers: ApiAuthHandlers): void 
   authHandlers = handlers
 }
 
+export function getCurrentAccessToken(): string | null {
+  return authHandlers?.getAccessToken() ?? null
+}
+
 export async function refreshSessionTokens(): Promise<AuthTokens> {
   if (!authHandlers) {
     throw new Error('API auth handlers are not configured')
@@ -90,7 +94,7 @@ export async function refreshSessionTokens(): Promise<AuthTokens> {
     const abortController = new AbortController()
     const timeoutId = setTimeout(() => abortController.abort(), DEFAULT_TIMEOUT_MS)
     try {
-      const response = await fetch(`${baseUrl()}/auth/refresh`, {
+      const response = await fetch(`${apiBaseUrl()}/auth/refresh`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -171,7 +175,7 @@ export async function apiRequest<T>(
       }
     }
 
-    const response = await fetch(`${baseUrl()}${path}`, {
+    const response = await fetch(`${apiBaseUrl()}${path}`, {
       method,
       headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,

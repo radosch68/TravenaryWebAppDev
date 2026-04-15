@@ -2,7 +2,8 @@ import type { ReactElement } from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { ArrowCounterClockwise, X } from '@phosphor-icons/react'
+import { ArrowCounterClockwise } from '@phosphor-icons/react'
+import { DialogShell } from '@/components/DialogShell'
 import { DashboardPaginationBar } from '@/components/DashboardPaginationBar'
 import { DraftReviewCarousel } from '@/components/itinerary/DraftReviewCarousel'
 import type { DraftItinerary, ModelInfo, OutputDepth } from '@/services/ai-generation.service'
@@ -15,6 +16,7 @@ import {
   POLL_INTERVAL_MS,
 } from '@/services/ai-generation.service'
 import { ApiError } from '@/services/contracts'
+import genStyles from './GenerationModal.module.css'
 import type {
   LanguageMode,
   CuratedLanguageCode,
@@ -200,6 +202,7 @@ export function GenerationModal({ onClose, onFallback }: GenerationModalProps): 
   const [aiResponseTimeMs, setAiResponseTimeMs] = useState<number | undefined>()
   const [saveError, setSaveError] = useState<string | null>(null)
   const [isSavingAll, setIsSavingAll] = useState(false)
+  const [selectedPhotoIndexes, setSelectedPhotoIndexes] = useState<Record<string, number>>({})
   const [countdown, setCountdown] = useState(0)
   const [pollCycleKey, setPollCycleKey] = useState(0)
   const [isPolling, setIsPolling] = useState(false)
@@ -694,25 +697,138 @@ export function GenerationModal({ onClose, onFallback }: GenerationModalProps): 
     })
   }
 
-  return (
-    <div
-      className="generation-modal-overlay"
-      role="dialog"
-      aria-modal="true"
-      aria-label={t('ai-generation:modal.title')}
-    >
-      <div className="generation-modal">
-        <div className="generation-modal__header">
-          <h2>{t('ai-generation:modal.title')}</h2>
+  const footerContent = (() => {
+    if (step === 'input' || (step === 'error' && !generationRequestId)) {
+      return (
+        <button
+          type="button"
+          className="generation-modal__submit"
+          onClick={() => void handleGenerate()}
+        >
+          {t('ai-generation:modal.generateButton')}
+        </button>
+      )
+    }
+
+    if (step === 'loading') {
+      return (
+        <div className={genStyles.footerLoading}>
           <button
             type="button"
-            className="generation-modal__close"
-            onClick={handleCancel}
-            aria-label={t('ai-generation:modal.cancelButton')}
+            className="generation-modal__check-now"
+            onClick={handleCheckNow}
+            disabled={isPolling}
           >
-            <X size={18} />
+            {isPolling
+              ? t('ai-generation:modal.checking')
+              : countdown > 0
+                ? t('ai-generation:modal.checkNow', { seconds: countdown })
+                : t('ai-generation:modal.checkNowNoTimer')}
           </button>
+          <p className="generation-modal__check-hint">
+            {t('ai-generation:modal.checkNowHint')}
+          </p>
         </div>
+      )
+    }
+
+    if (step === 'error' && generationRequestId) {
+      return (
+        <button
+          type="button"
+          className="generation-modal__submit"
+          onClick={handleRetry}
+        >
+          {t('ai-generation:modal.retryButton')}
+        </button>
+      )
+    }
+
+    return null
+  })()
+
+  const getSelectedPhotoUrl = (draft: DraftItinerary): string | undefined => {
+    const key = `${generationRequestId}:${draft._id}`
+    const idx = selectedPhotoIndexes[key] ?? 0
+    const legacyPhoto = (draft as DraftItinerary & { coverPhoto?: { url: string; caption?: string | null } | null }).coverPhoto
+    const options = draft.coverPhotoOptions ?? []
+    const photo = options[idx] ?? options[0] ?? legacyPhoto ?? null
+    return photo?.url
+  }
+
+  const isReviewStep = step === 'review' || step === 'saving'
+
+  const paginationBar = isReviewStep && drafts.length > 0 ? (
+    <DashboardPaginationBar
+      page={draftIndex + 1}
+      totalPages={drafts.length}
+      onSetPage={(p) => setDraftIndex(p - 1)}
+      disabled={step === 'saving'}
+      labelKey="ai-generation:carousel.draftOf"
+      ariaLabelKey="ai-generation:carousel.navigationAriaLabel"
+    />
+  ) : null
+
+  const reviewFooter = isReviewStep && drafts.length > 0 && generationRequestId ? (
+    <div className={genStyles.reviewFooter}>
+      {saveError ? (
+        <p className={`error ${genStyles.reviewError}`}>{saveError}</p>
+      ) : null}
+      <div className={genStyles.reviewButtons}>
+        <button
+          type="button"
+          className="draft-carousel__select-button"
+          disabled={step === 'saving'}
+          onClick={() => {
+            const draft = drafts[draftIndex]
+            if (draft && generationRequestId) {
+              void handleSelectDraft(draft._id, generationRequestId, getSelectedPhotoUrl(draft))
+            }
+          }}
+        >
+          {step === 'saving' && !isSavingAll
+            ? t('ai-generation:carousel.saving')
+            : t('ai-generation:carousel.selectButton')}
+        </button>
+        {drafts.length > 1 ? (
+          <button
+            type="button"
+            className="draft-carousel__save-all-button"
+            disabled={step === 'saving'}
+            onClick={() => {
+              const selections = drafts.map((d) => ({
+                draftId: d._id,
+                generationRequestId: generationRequestId!,
+                selectedPhotoUrl: getSelectedPhotoUrl(d),
+              }))
+              void handleSaveAll(selections)
+            }}
+          >
+            {isSavingAll
+              ? t('ai-generation:carousel.savingAll')
+              : t('ai-generation:carousel.saveAllButton', { count: drafts.length })}
+          </button>
+        ) : null}
+      </div>
+      {aiModel || aiResponseTimeMs ? (
+        <p className={genStyles.reviewFootnote}>
+          {t('ai-generation:carousel.generationFootnote', {
+            model: aiModel ?? t('ai-generation:carousel.unknownModel'),
+            seconds: aiResponseTimeMs != null ? (aiResponseTimeMs / 1000).toFixed(1) : '?',
+          })}
+        </p>
+      ) : null}
+    </div>
+  ) : null
+
+  return (
+    <DialogShell
+      title={t('ai-generation:modal.title')}
+      onClose={handleCancel}
+      closeOnOverlayClick={false}
+      footer={reviewFooter ?? footerContent}
+      headerExtra={paginationBar}
+    >
 
         {resumeRequestId && (step === 'input' || (step === 'error' && !generationRequestId)) ? (
           <div className="generation-modal__resume-panel" aria-live="polite">
@@ -1114,16 +1230,6 @@ export function GenerationModal({ onClose, onFallback }: GenerationModalProps): 
                 )}
               </div>
               </div>
-
-              <div className="generation-modal__actions">
-                <button
-                  type="button"
-                  className="generation-modal__submit"
-                  onClick={() => void handleGenerate()}
-                >
-                  {t('ai-generation:modal.generateButton')}
-                </button>
-              </div>
             </>
           )}
 
@@ -1138,95 +1244,39 @@ export function GenerationModal({ onClose, onFallback }: GenerationModalProps): 
                   defaultValue: t('ai-generation:modal.generatingHint'),
                 })}
               </p>
-              <button
-                type="button"
-                className="generation-modal__check-now"
-                onClick={handleCheckNow}
-                disabled={isPolling}
-              >
-                {isPolling
-                  ? t('ai-generation:modal.checking')
-                  : countdown > 0
-                    ? t('ai-generation:modal.checkNow', { seconds: countdown })
-                    : t('ai-generation:modal.checkNowNoTimer')}
-              </button>
-              <p className="generation-modal__check-hint">
-                {t('ai-generation:modal.checkNowHint')}
-              </p>
+              {pollCycleKey > 0 && (
+                <div className={genStyles.progress}>
+                  <div
+                    key={pollCycleKey}
+                    className={`generation-modal__progress-bar ${pollCycleKey % 2 === 0 ? 'generation-modal__progress-bar--fill' : 'generation-modal__progress-bar--drain'}`}
+                  />
+                </div>
+              )}
             </div>
           )}
 
           {(step === 'review' || step === 'saving') && drafts.length > 0 && generationRequestId ? (
-            <>
-              <DashboardPaginationBar
-                page={draftIndex + 1}
-                totalPages={drafts.length}
-                onSetPage={(p) => setDraftIndex(p - 1)}
-                disabled={step === 'saving'}
-                position="top"
-                labelKey="ai-generation:carousel.draftOf"
-                ariaLabelKey="ai-generation:carousel.navigationAriaLabel"
-              />
               <DraftReviewCarousel
                 drafts={drafts}
                 generationRequestId={generationRequestId}
-                onSelectDraft={(draftId, reqId, selectedPhotoUrl) =>
-                  void handleSelectDraft(draftId, reqId, selectedPhotoUrl)
-                }
-                onSaveAll={(selections) => void handleSaveAll(selections)}
                 isSaving={step === 'saving'}
-                isSavingAll={isSavingAll}
-                saveError={saveError}
                 currentIndex={draftIndex}
                 onIndexChange={setDraftIndex}
-                aiModel={aiModel}
-                aiResponseTimeMs={aiResponseTimeMs}
+                selectedPhotoIndexes={selectedPhotoIndexes}
+                onPhotoIndexChange={(key, index) =>
+                  setSelectedPhotoIndexes((prev) => ({ ...prev, [key]: index }))
+                }
               />
-              <DashboardPaginationBar
-                page={draftIndex + 1}
-                totalPages={drafts.length}
-                onSetPage={(p) => setDraftIndex(p - 1)}
-                disabled={step === 'saving'}
-                position="bottom"
-                labelKey="ai-generation:carousel.draftOf"
-                ariaLabelKey="ai-generation:carousel.navigationAriaLabel"
-              />
-            </>
           ) : null}
 
           {step === 'error' && (
             <div className="generation-modal__error-state">
               <p className="error">{errorMessage ?? t('ai-generation:modal.errorTitle')}</p>
-              <div className="generation-modal__actions">
-                <button
-                  type="button"
-                  className="generation-modal__submit"
-                  onClick={handleRetry}
-                >
-                  {t('ai-generation:modal.retryButton')}
-                </button>
-                <button
-                  type="button"
-                  className="generation-modal__cancel"
-                  onClick={onFallback}
-                >
-                  {t('ai-generation:modal.useTemplateButton')}
-                </button>
-              </div>
             </div>
           )}
         </div>
 
-        {step === 'loading' && pollCycleKey > 0 && (
-          <div className="generation-modal__progress">
-            <div
-              key={pollCycleKey}
-              className={`generation-modal__progress-bar ${pollCycleKey % 2 === 0 ? 'generation-modal__progress-bar--fill' : 'generation-modal__progress-bar--drain'}`}
-            />
-          </div>
-        )}
-      </div>
-    </div>
+    </DialogShell>
   )
 }
 

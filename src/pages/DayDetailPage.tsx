@@ -18,9 +18,10 @@ import { EditableField } from '@/components/EditableField'
 import { DayEditorShell } from '@/components/itinerary/DayEditorShell'
 import { ActivityFormPanel } from '@/components/itinerary/ActivityFormPanel'
 import type { ActivityFormSavePayload } from '@/components/itinerary/ActivityFormPanel'
+import { ActivityTypePicker } from '@/components/itinerary/ActivityTypePicker'
 import { ApiError } from '@/services/contracts'
 import { getItinerary, updateItinerary } from '@/services/itinerary-service'
-import type { ItineraryDetail, ItineraryActivity, ItineraryActivityInput, ItineraryDay, UpdateItineraryRequest } from '@/services/contracts'
+import type { ItineraryDetail, ItineraryActivity, ItineraryActivityInput, ItineraryDay, UpdateItineraryRequest, ActivityType } from '@/services/contracts'
 import { formatLocalDate, formatWeekday } from '@/utils/date-format'
 import { sectionKey } from '@/utils/day-edit-transforms'
 import { PencilSimple } from '@phosphor-icons/react'
@@ -37,9 +38,12 @@ export function DayDetailPage(): ReactElement {
   const [pendingDaySummary, setPendingDaySummary] = useState<string | null>(null)
 
   // Form panel state
-  const [formMode, setFormMode] = useState<'create' | 'edit' | null>(null)
+  const [formMode, setFormMode] = useState<'pick-type' | 'create' | 'edit' | null>(null)
   const [editingActivityId, setEditingActivityId] = useState<string | null>(null)
   const [addToBlockKey, setAddToBlockKey] = useState<string | null>(null)
+  const [createActivityType, setCreateActivityType] = useState<ActivityType>('note')
+  const [createOwnBlock, setCreateOwnBlock] = useState(false)
+  const [createBlockDividerTitle, setCreateBlockDividerTitle] = useState('')
 
   const loadDay = useDayEditStore((state) => state.loadDay)
   const applyServerState = useDayEditStore((state) => state.applyServerState)
@@ -168,8 +172,15 @@ export function DayDetailPage(): ReactElement {
 
   const handleActivityAdd = useCallback((blockKey: string): void => {
     setAddToBlockKey(blockKey)
-    setFormMode('create')
+    setFormMode('pick-type')
     setEditingActivityId(null)
+  }, [])
+
+  const handleTypeSelected = useCallback((type: ActivityType, ownBlock: boolean, dividerTitle: string): void => {
+    setCreateActivityType(type)
+    setCreateOwnBlock(ownBlock)
+    setCreateBlockDividerTitle(dividerTitle)
+    setFormMode('create')
   }, [])
 
   const handleBreakBlock = useCallback((blockKey: string): void => {
@@ -397,10 +408,20 @@ export function DayDetailPage(): ReactElement {
           />
         </DndContext>
 
-        {formMode && (
+        {formMode === 'pick-type' && (
+          <ActivityTypePicker
+            onSelect={handleTypeSelected}
+            onCancel={handleFormCancel}
+          />
+        )}
+
+        {(formMode === 'create' || formMode === 'edit') && (
           <ActivityFormPanel
             activity={formMode === 'edit' ? editingActivity : undefined}
-            mode={formMode}
+            activityType={formMode === 'edit' ? (editingActivity?.type ?? 'note') : createActivityType}
+            owningDayDate={day?.date}
+            createOwnBlock={formMode === 'create' ? createOwnBlock : undefined}
+            blockDividerTitle={formMode === 'create' ? createBlockDividerTitle : undefined}
             onSave={handleFormSave}
             onCancel={handleFormCancel}
           />
@@ -418,7 +439,29 @@ export function DayDetailPage(): ReactElement {
 }
 
 function toActivityInput(activity: ItineraryActivity): ItineraryActivityInput {
-  return activity
+  if (activity.type !== 'accommodation') {
+    return activity
+  }
+
+  const details = { ...(activity.details ?? {}), nights: activity.details?.nights ?? 1 }
+  const rawContactEmail = typeof details.contactEmail === 'string' ? details.contactEmail.trim() : undefined
+
+  // Legacy data can contain non-email contactEmail values that block saving unrelated day edits.
+  if (rawContactEmail) {
+    const looksLikeEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawContactEmail)
+    if (!looksLikeEmail) {
+      delete details.contactEmail
+    } else {
+      details.contactEmail = rawContactEmail
+    }
+  } else if (details.contactEmail !== undefined) {
+    delete details.contactEmail
+  }
+
+  return {
+    ...activity,
+    details,
+  }
 }
 
 function DayPanelCloseButton({ ariaLabel, onClick }: { ariaLabel: string; onClick: () => void }): ReactElement {

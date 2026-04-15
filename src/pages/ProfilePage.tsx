@@ -23,6 +23,7 @@ import {
   updateDisplayName,
   updatePreferredLanguage,
 } from '@/services/profile-service'
+import { DevLogPanel } from '@/components/DevLogPanel'
 import { useAuthStore } from '@/store/auth-store'
 import { useProfileStore } from '@/store/profile-store'
 
@@ -360,6 +361,7 @@ export function ProfilePage(): ReactElement {
           )}
         </article>
       </section>
+      <DevLogPanel />
     </main>
   )
 }

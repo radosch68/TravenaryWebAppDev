@@ -1,5 +1,5 @@
 import type { ReactElement } from 'react'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { DraftItinerary, DraftBlockActivity, DraftActivityObject } from '@/services/ai-generation.service'
 import { formatDateRange } from '@/utils/date-format'
@@ -8,32 +8,23 @@ import { unsplashUrl } from '@/utils/unsplash-url'
 interface DraftReviewCarouselProps {
   drafts: DraftItinerary[]
   generationRequestId: string
-  onSelectDraft: (draftId: string, generationRequestId: string, selectedPhotoUrl?: string) => void
-  onSaveAll?: (selections: Array<{ draftId: string; generationRequestId: string; selectedPhotoUrl?: string }>) => void
   isSaving: boolean
-  isSavingAll: boolean
-  saveError: string | null
   currentIndex: number
   onIndexChange: (index: number) => void
-  aiModel?: string
-  aiResponseTimeMs?: number
+  selectedPhotoIndexes: Record<string, number>
+  onPhotoIndexChange: (key: string, index: number) => void
 }
 
 export function DraftReviewCarousel({
   drafts,
   generationRequestId,
-  onSelectDraft,
-  onSaveAll,
   isSaving,
-  isSavingAll,
-  saveError,
   currentIndex,
   onIndexChange,
-  aiModel,
-  aiResponseTimeMs,
+  selectedPhotoIndexes,
+  onPhotoIndexChange,
 }: DraftReviewCarouselProps): ReactElement {
   const { t, i18n } = useTranslation(['ai-generation'])
-  const [selectedPhotoIndexes, setSelectedPhotoIndexes] = useState<Record<string, number>>({})
 
   useEffect(() => {
     const handleArrowNavigation = (event: KeyboardEvent): void => {
@@ -86,12 +77,7 @@ export function DraftReviewCarousel({
                       key={`${photo.url}-${index}`}
                       type="button"
                       className={`draft-photo-thumb${selectedPhotoIndex === index ? ' draft-photo-thumb--selected' : ''}`}
-                      onClick={() =>
-                        setSelectedPhotoIndexes((prev) => ({
-                          ...prev,
-                          [photoSelectionKey]: index,
-                        }))
-                      }
+                      onClick={() => onPhotoIndexChange(photoSelectionKey, index)}
                       disabled={isSaving}
                       aria-label={photo.caption ?? draft.title}
                     >
@@ -194,52 +180,6 @@ export function DraftReviewCarousel({
           </div>
         ) : null}
 
-        {aiModel || aiResponseTimeMs ? (
-          <p className="draft-carousel__footnote">
-            {t('ai-generation:carousel.generationFootnote', {
-              model: aiModel ?? t('ai-generation:carousel.unknownModel'),
-              seconds: aiResponseTimeMs != null ? (aiResponseTimeMs / 1000).toFixed(1) : '?',
-            })}
-          </p>
-        ) : null}
-
-        {saveError ? (
-          <p className="error draft-carousel__error">{saveError}</p>
-        ) : null}
-
-        <button
-          type="button"
-          className="draft-carousel__select-button"
-          disabled={isSaving || isSavingAll}
-          onClick={() => onSelectDraft(draft._id, generationRequestId, selectedPhoto?.url)}
-        >
-          {isSaving && !isSavingAll
-            ? t('ai-generation:carousel.saving')
-            : t('ai-generation:carousel.selectButton')}
-        </button>
-
-        {onSaveAll && drafts.length > 1 ? (
-          <button
-            type="button"
-            className="draft-carousel__save-all-button"
-            disabled={isSaving || isSavingAll}
-            onClick={() => {
-              const selections = drafts.map((d) => {
-                const key = `${generationRequestId}:${d._id}`
-                const idx = selectedPhotoIndexes[key] ?? 0
-                const legacyPhoto = (d as DraftItinerary & { coverPhoto?: { url: string; caption?: string | null } | null }).coverPhoto
-                const options = d.coverPhotoOptions ?? []
-                const photo = options[idx] ?? options[0] ?? legacyPhoto ?? null
-                return { draftId: d._id, generationRequestId, selectedPhotoUrl: photo?.url }
-              })
-              onSaveAll(selections)
-            }}
-          >
-            {isSavingAll
-              ? t('ai-generation:carousel.savingAll')
-              : t('ai-generation:carousel.saveAllButton', { count: drafts.length })}
-          </button>
-        ) : null}
       </div>
     </div>
   )
