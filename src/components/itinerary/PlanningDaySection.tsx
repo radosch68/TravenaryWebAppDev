@@ -154,30 +154,23 @@ interface PlanningActivityRowProps {
 }
 
 function PlanningActivityRow({ activity }: PlanningActivityRowProps): ReactElement {
-  const { i18n, t } = useTranslation(['common'])
+  const { i18n } = useTranslation(['common'])
   const typeColor = ACTIVITY_TYPE_COLOR[activity.type] ?? ACTIVITY_TYPE_COLOR.note
   const anchored = isActivityAnchored(activity)
 
   return (
     <li
-      className="planning-activity"
+      className={`planning-activity${anchored ? ' planning-activity--anchored' : ''}`}
       style={{
         background: typeColor.bg,
         border: `1px solid ${typeColor.icon}1A`,
       }}
     >
-      <span className="planning-activity__type-icon" style={{ color: typeColor.icon }}>
-        {ACTIVITY_TYPE_ICON[activity.type] ?? <Star size={16} />}
-      </span>
-      {anchored ? (
-        <span
-          aria-label={t('common:itinerary.presentation.anchored')}
-          title={t('common:itinerary.presentation.anchored')}
-          style={{ display: 'inline-flex', alignItems: 'center', color: 'var(--accent)' }}
-        >
-          <AnchorSimple size={12} weight="bold" />
+      <span className="planning-activity__left">
+        <span className="planning-activity__type-icon" style={{ color: typeColor.icon }}>
+          {ACTIVITY_TYPE_ICON[activity.type] ?? <Star size={16} />}
         </span>
-      ) : null}
+      </span>
       <span className="planning-activity__title">{activity.title}</span>
       {activity.time ? (
         <span className="planning-activity__time">
