@@ -57,9 +57,7 @@ export function ItineraryPlanningView({ itinerary, onReorder, reorderError }: It
     if (!sourceDay) return
 
     const sourceSections = groupActivitiesForPlanning(sourceDay.activities).sections
-    const sourceSectionIdx = sourceSections.findIndex(
-      (s) => s.type === 'flexible' && s.blockIndex === sourceBlockIdx,
-    )
+    const sourceSectionIdx = sourceSections.findIndex((s) => s.blockIndex === sourceBlockIdx)
     if (sourceSectionIdx === -1) return
     const draggedSection = sourceSections[sourceSectionIdx]
 

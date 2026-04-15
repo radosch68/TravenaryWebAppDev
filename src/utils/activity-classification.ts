@@ -11,22 +11,23 @@ export function getEffectiveAnchored(activity: ItineraryActivity): boolean {
 
 /* ---- Section-based grouping for Planning view ---- */
 
-export type PlanningSection =
-  | { type: 'anchored'; activities: ItineraryActivity[] }
-  | { type: 'flexible'; blockIndex: number; dividerId?: string; dividerLabel?: string; activities: ItineraryActivity[] }
+export interface PlanningSection {
+  blockIndex: number
+  dividerId?: string
+  dividerLabel?: string
+  activities: ItineraryActivity[]
+}
 
 export interface PlanningDayGroups {
   sections: PlanningSection[]
-  anchoredActivities: ItineraryActivity[]
-  flexibleBlockCount: number
+  blockCount: number
 }
 
 /**
  * Groups activities into interleaved sections preserving the original array order.
  *
  * Rules:
- * - Consecutive anchored activities form an `anchored` section.
- * - Consecutive flexible activities form a `flexible` section (block).
+ * - Consecutive non-divider activities form a block.
  * - A `divider` activity starts a new flexible block, taking the divider's title as the label.
  *   The divider itself is NOT included in the activity list — it's metadata.
  * - A leading divider labels the first flexible block of a day; otherwise the first flexible block
@@ -34,33 +35,22 @@ export interface PlanningDayGroups {
  */
 export function groupActivitiesForPlanning(activities: ItineraryActivity[]): PlanningDayGroups {
   const sections: PlanningSection[] = []
-  const allAnchored: ItineraryActivity[] = []
-  let flexibleBlockCount = 0
+  let blockCount = 0
 
-  let currentAnchored: ItineraryActivity[] = []
-  let currentFlexible: ItineraryActivity[] = []
+  let currentActivities: ItineraryActivity[] = []
   let currentDividerId: string | undefined
   let currentDividerLabel: string | undefined
 
-  function flushAnchored(): void {
-    if (currentAnchored.length > 0) {
-      sections.push({ type: 'anchored', activities: currentAnchored })
-      allAnchored.push(...currentAnchored)
-      currentAnchored = []
-    }
-  }
-
-  function flushFlexible(): void {
-    if (currentFlexible.length > 0) {
+  function flushBlock(): void {
+    if (currentActivities.length > 0) {
       sections.push({
-        type: 'flexible',
-        blockIndex: flexibleBlockCount,
+        blockIndex: blockCount,
         dividerId: currentDividerId,
         dividerLabel: currentDividerLabel,
-        activities: currentFlexible,
+        activities: currentActivities,
       })
-      flexibleBlockCount++
-      currentFlexible = []
+      blockCount++
+      currentActivities = []
       currentDividerId = undefined
       currentDividerLabel = undefined
     }
@@ -68,26 +58,19 @@ export function groupActivitiesForPlanning(activities: ItineraryActivity[]): Pla
 
   for (const activity of activities) {
     if (activity.type === 'divider') {
-      // Divider starts a new flexible block — flush any in-progress flexible block first
-      flushFlexible()
+      // Divider starts a new block — flush any in-progress block first.
+      flushBlock()
       currentDividerId = activity.id
       currentDividerLabel = activity.title || undefined
       continue
     }
 
-    if (getEffectiveAnchored(activity)) {
-      flushFlexible()
-      currentAnchored.push(activity)
-    } else {
-      flushAnchored()
-      currentFlexible.push(activity)
-    }
+    currentActivities.push(activity)
   }
 
-  flushAnchored()
-  flushFlexible()
+  flushBlock()
 
-  return { sections, anchoredActivities: allAnchored, flexibleBlockCount }
+  return { sections, blockCount }
 }
 
 export function sortActivitiesForTimeline(activities: ItineraryActivity[]): ItineraryActivity[] {
@@ -120,27 +103,22 @@ export function flattenSectionsToActivities(sections: PlanningSection[]): Itiner
   let prevWasFlexible = false
 
   for (const section of sections) {
-    if (section.type === 'anchored') {
-      result.push(...section.activities)
-      prevWasFlexible = false
-    } else {
-      if (section.dividerId !== undefined || section.dividerLabel !== undefined) {
-        result.push({
-          id: section.dividerId ?? generateClientId(),
-          type: 'divider',
-          title: section.dividerLabel ?? '',
-        })
-      } else if (prevWasFlexible) {
-        // Insert empty divider to preserve block boundary
-        result.push({
-          id: generateClientId(),
-          type: 'divider',
-          title: '',
-        })
-      }
-      result.push(...section.activities)
-      prevWasFlexible = true
+    if (section.dividerId !== undefined || section.dividerLabel !== undefined) {
+      result.push({
+        id: section.dividerId ?? generateClientId(),
+        type: 'divider',
+        title: section.dividerLabel ?? '',
+      })
+    } else if (prevWasFlexible) {
+      // Insert empty divider to preserve block boundary
+      result.push({
+        id: generateClientId(),
+        type: 'divider',
+        title: '',
+      })
     }
+    result.push(...section.activities)
+    prevWasFlexible = true
   }
   return result
 }

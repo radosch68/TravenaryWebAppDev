@@ -88,7 +88,6 @@ export const useDayEditStore = create<DayEditState>((set, get) => ({
   editDividerLabel: (blockKey, newLabel) => {
     set((state) => ({
       sections: state.sections.map((s) => {
-        if (s.type !== 'flexible') return s
         if (`flex-${s.blockIndex}` !== blockKey) return s
         return { ...s, dividerLabel: newLabel || undefined }
       }),

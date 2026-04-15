@@ -5,6 +5,7 @@ import { useDroppable } from '@dnd-kit/core'
 import { AnchorSimple, Plus, Axe, PencilSimple } from '@phosphor-icons/react'
 
 import type { PlanningSection } from '@/utils/activity-classification'
+import { isActivityAnchored } from '@/utils/activity-classification'
 import { ActivityEditorRow } from './ActivityEditorRow'
 
 interface DayBlockEditorProps {
@@ -42,11 +43,11 @@ export function DayBlockEditor({
   disabled,
 }: DayBlockEditorProps): ReactElement {
   const { t } = useTranslation(['common'])
-  const isAnchored = section.type === 'anchored'
-  const dividerLabel = section.type === 'flexible' ? section.dividerLabel : undefined
-  const hasDividerMarker = section.type === 'flexible'
-    && (section.dividerId !== undefined || section.dividerLabel !== undefined)
-  const canBreak = !isAnchored && section.activities.length > 1 && onBreakBlock
+  const dividerLabel = section.dividerLabel
+  const hasAnchoredActivities = section.activities.some((activity) => isActivityAnchored(activity))
+  const hasDividerMarker = section.dividerId !== undefined || section.dividerLabel !== undefined
+  const canBreak = section.activities.length > 1 && onBreakBlock
+  const visibleLabel = dividerLabel ?? (hasAnchoredActivities ? t('common:itinerary.presentation.anchored') : undefined)
 
   const [editingLabel, setEditingLabel] = useState(false)
   const [labelDraft, setLabelDraft] = useState('')
@@ -66,8 +67,8 @@ export function DayBlockEditor({
   }
 
   return (
-    <div className={`day-block-editor${isAnchored ? ' day-block-editor--anchored' : ' day-block-editor--flexible'}`}>
-      {isAnchored && (
+    <div className={`day-block-editor${hasAnchoredActivities ? ' day-block-editor--anchored' : ' day-block-editor--flexible'}`}>
+      {hasAnchoredActivities && (
         <span
           className="day-block-editor__anchor-marker"
           aria-label={t('common:itinerary.presentation.anchored')}
@@ -93,7 +94,7 @@ export function DayBlockEditor({
             />
           ) : (
             <>
-              <span className="day-block-editor__label-text">{dividerLabel}</span>
+              <span className="day-block-editor__label-text">{visibleLabel}</span>
               <button
                 type="button"
                 className="day-block-editor__icon-btn"
@@ -107,18 +108,16 @@ export function DayBlockEditor({
             </>
           )}
           <span className="day-block-editor__label-line" />
-          {!isAnchored && (
-            <button
-              type="button"
-              className="day-block-editor__icon-btn"
-              onClick={() => onActivityAdd(blockKey)}
-              disabled={disabled}
-              aria-label={t('common:itinerary.dayEditor.addActivity')}
-              title={t('common:itinerary.dayEditor.addActivity')}
-            >
-              <Plus size={17} weight="bold" />
-            </button>
-          )}
+          <button
+            type="button"
+            className="day-block-editor__icon-btn"
+            onClick={() => onActivityAdd(blockKey)}
+            disabled={disabled}
+            aria-label={t('common:itinerary.dayEditor.addActivity')}
+            title={t('common:itinerary.dayEditor.addActivity')}
+          >
+            <Plus size={17} weight="bold" />
+          </button>
           {canBreak && (
             <button
               type="button"
@@ -134,7 +133,7 @@ export function DayBlockEditor({
         </div>
       )}
 
-      {!hasDividerMarker && !isAnchored && (
+      {!hasDividerMarker && (
         <div className="day-block-editor__label">
           {editingLabel ? (
             <input
@@ -150,16 +149,19 @@ export function DayBlockEditor({
               autoFocus
             />
           ) : (
-            <button
-              type="button"
-              className="day-block-editor__icon-btn"
-              onClick={startLabelEdit}
-              disabled={disabled}
-              aria-label={t('common:edit')}
-              title={t('common:edit')}
-            >
-              <PencilSimple size={15} />
-            </button>
+            <>
+              {visibleLabel ? <span className="day-block-editor__label-text">{visibleLabel}</span> : null}
+              <button
+                type="button"
+                className="day-block-editor__icon-btn"
+                onClick={startLabelEdit}
+                disabled={disabled}
+                aria-label={t('common:edit')}
+                title={t('common:edit')}
+              >
+                <PencilSimple size={15} />
+              </button>
+            </>
           )}
           <span className="day-block-editor__label-line" />
           <button
@@ -193,7 +195,7 @@ export function DayBlockEditor({
           <Fragment key={activity.id}>
             <ActivityEditorRow
               activity={activity}
-              isAnchored={isAnchored}
+              isAnchored={isActivityAnchored(activity)}
               blockKey={blockKey}
               onEdit={() => onActivityEdit(activity.id)}
               onDelete={() => onActivityDelete(activity.id)}

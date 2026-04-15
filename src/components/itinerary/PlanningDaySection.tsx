@@ -6,7 +6,7 @@ import { useDraggable, useDroppable } from '@dnd-kit/core'
 import { AnchorSimple, Star } from '@phosphor-icons/react'
 
 import type { ItineraryActivity, ItineraryDay } from '@/services/contracts'
-import { groupActivitiesForPlanning } from '@/utils/activity-classification'
+import { groupActivitiesForPlanning, isActivityAnchored } from '@/utils/activity-classification'
 import { formatLocalTimeRange } from '@/utils/date-format'
 import { ACTIVITY_TYPE_ICON, ACTIVITY_TYPE_COLOR } from './activity-presentation'
 
@@ -19,7 +19,7 @@ interface PlanningDaySectionProps {
 
 export function PlanningDaySection({ day, disabled, totalDays, dayIndex }: PlanningDaySectionProps): ReactElement {
   const { t } = useTranslation(['common'])
-  const { sections, flexibleBlockCount } = groupActivitiesForPlanning(day.activities)
+  const { sections, blockCount } = groupActivitiesForPlanning(day.activities)
 
   if (day.activities.length === 0) {
     return (
@@ -34,38 +34,17 @@ export function PlanningDaySection({ day, disabled, totalDays, dayIndex }: Plann
     <div className="planning-day-section">
       <DropSlot dayNumber={day.dayNumber} position={0} />
       {sections.map((section, sIdx) => (
-        <Fragment key={section.type === 'anchored' ? `a-${sIdx}` : `f-${section.blockIndex}`}>
-          {section.type === 'anchored' ? (
-            <div className="planning-section planning-section--anchored">
-              <span
-                className="planning-section__anchor-marker"
-                aria-label={t('common:itinerary.presentation.anchored')}
-                title={t('common:itinerary.presentation.anchored')}
-              >
-                <AnchorSimple size={12} weight="bold" />
-              </span>
-              <ul className="planning-section__list">
-                {section.activities.map((activity) => (
-                  <PlanningActivityRow
-                    key={activity.id}
-                    activity={activity}
-                    disabled={disabled}
-                  />
-                ))}
-              </ul>
-            </div>
-          ) : (
-            <FlexibleBlock
-              dayNumber={day.dayNumber}
-              dayIndex={dayIndex}
-              totalDays={totalDays}
-              blockIndex={section.blockIndex}
-              blockCount={flexibleBlockCount}
-              dividerLabel={section.dividerLabel}
-              activities={section.activities}
-              disabled={disabled}
-            />
-          )}
+        <Fragment key={`f-${section.blockIndex}`}>
+          <FlexibleBlock
+            dayNumber={day.dayNumber}
+            dayIndex={dayIndex}
+            totalDays={totalDays}
+            blockIndex={section.blockIndex}
+            blockCount={blockCount}
+            dividerLabel={section.dividerLabel}
+            activities={section.activities}
+            disabled={disabled}
+          />
           <DropSlot dayNumber={day.dayNumber} position={sIdx + 1} />
         </Fragment>
       ))}
@@ -99,8 +78,11 @@ interface FlexibleBlockProps {
 }
 
 function FlexibleBlock({ dayNumber, totalDays, blockIndex, blockCount, dividerLabel, activities, disabled }: FlexibleBlockProps): ReactElement {
+  const { t } = useTranslation(['common'])
   const isSingleDay = totalDays <= 1
   const isSingleBlock = isSingleDay && blockCount <= 1
+  const hasAnchoredActivities = activities.some((activity) => isActivityAnchored(activity))
+  const visibleLabel = dividerLabel ?? (hasAnchoredActivities ? t('common:itinerary.presentation.anchored') : undefined)
 
   const { setNodeRef, transform, isDragging, listeners, attributes } = useDraggable({
     id: `flex-${dayNumber}-${blockIndex}`,
@@ -116,8 +98,17 @@ function FlexibleBlock({ dayNumber, totalDays, blockIndex, blockCount, dividerLa
     <div
       ref={setNodeRef}
       style={style}
-      className={`planning-section planning-section--flexible${isDragging ? ' planning-section--dragging' : ''}`}
+      className={`planning-section ${hasAnchoredActivities ? 'planning-section--anchored' : 'planning-section--flexible'}${isDragging ? ' planning-section--dragging' : ''}`}
     >
+      {hasAnchoredActivities && (
+        <span
+          className="planning-section__anchor-marker"
+          aria-label={t('common:itinerary.presentation.anchored')}
+          title={t('common:itinerary.presentation.anchored')}
+        >
+          <AnchorSimple size={12} weight="bold" />
+        </span>
+      )}
       <div className="planning-section__divider-label">
         {!isSingleBlock && (
           <span
@@ -129,7 +120,7 @@ function FlexibleBlock({ dayNumber, totalDays, blockIndex, blockCount, dividerLa
             <GripIcon />
           </span>
         )}
-        {dividerLabel && <span className="planning-section__divider-text">{dividerLabel}</span>}
+        {visibleLabel && <span className="planning-section__divider-text">{visibleLabel}</span>}
         <span className="planning-section__divider-line" />
         {!isSingleBlock && (
           <span
@@ -163,8 +154,9 @@ interface PlanningActivityRowProps {
 }
 
 function PlanningActivityRow({ activity }: PlanningActivityRowProps): ReactElement {
-  const { i18n } = useTranslation(['common'])
+  const { i18n, t } = useTranslation(['common'])
   const typeColor = ACTIVITY_TYPE_COLOR[activity.type] ?? ACTIVITY_TYPE_COLOR.note
+  const anchored = isActivityAnchored(activity)
 
   return (
     <li
@@ -177,6 +169,15 @@ function PlanningActivityRow({ activity }: PlanningActivityRowProps): ReactEleme
       <span className="planning-activity__type-icon" style={{ color: typeColor.icon }}>
         {ACTIVITY_TYPE_ICON[activity.type] ?? <Star size={16} />}
       </span>
+      {anchored ? (
+        <span
+          aria-label={t('common:itinerary.presentation.anchored')}
+          title={t('common:itinerary.presentation.anchored')}
+          style={{ display: 'inline-flex', alignItems: 'center', color: 'var(--accent)' }}
+        >
+          <AnchorSimple size={12} weight="bold" />
+        </span>
+      ) : null}
       <span className="planning-activity__title">{activity.title}</span>
       {activity.time ? (
         <span className="planning-activity__time">

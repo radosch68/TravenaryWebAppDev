@@ -66,7 +66,6 @@ export function insertActivityAsNewBlock(
     }
 
     nextSections.push({
-      type: 'flexible',
       blockIndex: -1,
       dividerId: generateClientId(),
       ...(normalizedLabel ? { dividerLabel: normalizedLabel } : {}),
@@ -147,19 +146,14 @@ export function breakBlock(
   let flexCounter = 0
   for (const section of sections) {
     const key = sectionKey(section)
-    if (key !== blockKey || section.type !== 'flexible') {
-      if (section.type === 'flexible') {
-        result.push({ ...section, blockIndex: flexCounter++ })
-      } else {
-        result.push(section)
-      }
+    if (key !== blockKey) {
+      result.push({ ...section, blockIndex: flexCounter++ })
       continue
     }
 
-    // Replace the block with individual flexible sections (no divider)
+    // Replace the block with individual sections (no divider grouping).
     for (const [index, activity] of section.activities.entries()) {
       result.push({
-        type: 'flexible',
         blockIndex: flexCounter++,
         ...(index > 0 ? { dividerId: generateClientId() } : {}),
         activities: [activity],
@@ -172,26 +166,14 @@ export function breakBlock(
 
 /** Remove empty flexible blocks (blocks with no activities after mutations) */
 export function cleanupEmptyBlocks(sections: PlanningSection[]): PlanningSection[] {
-  const filtered = sections.filter((section) => {
-    if (section.type === 'anchored' && section.activities.length === 0) return false
-    if (section.type === 'flexible' && section.activities.length === 0) return false
-    return true
-  })
+  const filtered = sections.filter((section) => section.activities.length > 0)
 
-  // Renumber flexible block indices
+  // Renumber block indices.
   let flexIndex = 0
-  return filtered.map((section) => {
-    if (section.type === 'flexible') {
-      return { ...section, blockIndex: flexIndex++ }
-    }
-    return section
-  })
+  return filtered.map((section) => ({ ...section, blockIndex: flexIndex++ }))
 }
 
 /** Generate a stable key for a section */
 export function sectionKey(section: PlanningSection): string {
-  if (section.type === 'anchored') {
-    return `anchored-${section.activities[0]?.id ?? 'empty'}`
-  }
   return `flex-${section.blockIndex}`
 }
