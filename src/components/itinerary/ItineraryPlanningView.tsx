@@ -1,5 +1,5 @@
 import type { ReactElement } from 'react'
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
@@ -12,6 +12,7 @@ import {
 } from '@dnd-kit/core'
 import type { DragEndEvent } from '@dnd-kit/core'
 
+import { YesNoDialog } from '@/components/YesNoDialog'
 import type { ItineraryDay, ItineraryDetail } from '@/services/contracts'
 import { formatLocalDate, formatWeekday } from '@/utils/date-format'
 import { groupActivitiesForPlanning, flattenSectionsToActivities } from '@/utils/activity-classification'
@@ -23,13 +24,54 @@ interface ItineraryPlanningViewProps {
   reorderError?: boolean
 }
 
+interface PendingAnchoredMove {
+  updatedDays: ItineraryDay[]
+  message: string
+}
+
 export function ItineraryPlanningView({ itinerary, onReorder, reorderError }: ItineraryPlanningViewProps): ReactElement {
-  const { t } = useTranslation(['common'])
+  const { t, i18n } = useTranslation(['common'])
+  const [pendingAnchoredMove, setPendingAnchoredMove] = useState<PendingAnchoredMove | null>(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { delay: 75, tolerance: 5 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
   )
+
+  const applyCrossDayMove = useCallback((
+    days: ItineraryDay[],
+    sourceDayNum: number,
+    sourceSections: ReturnType<typeof groupActivitiesForPlanning>['sections'],
+    sourceSectionIdx: number,
+    draggedSection: ReturnType<typeof groupActivitiesForPlanning>['sections'][number],
+    targetDayNum: number,
+    targetPosition: number,
+  ): ItineraryDay[] | null => {
+    const targetDay = days.find((d) => d.dayNumber === targetDayNum)
+    if (!targetDay) return null
+
+    const hasAnchored = draggedSection.activities.some((a) => a.anchorDate != null)
+    const movedSection = hasAnchored && targetDay.date
+      ? {
+          ...draggedSection,
+          activities: draggedSection.activities.map((a) =>
+            a.anchorDate != null ? { ...a, anchorDate: targetDay.date! } : a,
+          ),
+        }
+      : draggedSection
+
+    const newSourceSections = [...sourceSections]
+    newSourceSections.splice(sourceSectionIdx, 1)
+
+    const targetSections = [...groupActivitiesForPlanning(targetDay.activities).sections]
+    targetSections.splice(targetPosition, 0, movedSection)
+
+    return days.map((d) => {
+      if (d.dayNumber === sourceDayNum) return { ...d, activities: flattenSectionsToActivities(newSourceSections) }
+      if (d.dayNumber === targetDayNum) return { ...d, activities: flattenSectionsToActivities(targetSections) }
+      return d
+    })
+  }, [])
 
   const handleDragEnd = useCallback((event: DragEndEvent): void => {
     const { active, over } = event
@@ -78,64 +120,86 @@ export function ItineraryPlanningView({ itinerary, onReorder, reorderError }: It
       onReorder(updatedDays)
     } else {
       // Cross-day move
-      const targetDay = days.find((d) => d.dayNumber === targetDayNum)
-      if (!targetDay) return
-
-      // Check if the dragged block contains anchored activities
       const hasAnchored = draggedSection.activities.some((a) => a.anchorDate != null)
+      const updatedDays = applyCrossDayMove(
+        days,
+        sourceDayNum,
+        sourceSections,
+        sourceSectionIdx,
+        draggedSection,
+        targetDayNum,
+        targetPosition,
+      )
+      if (!updatedDays) return
+
       if (hasAnchored) {
-        const confirmed = window.confirm(t('common:itinerary.presentation.confirmAnchoredMove'))
-        if (!confirmed) return
+        const anchoredDates = Array.from(new Set(
+          draggedSection.activities
+            .map((activity) => activity.anchorDate)
+            .filter((anchorDate): anchorDate is string => typeof anchorDate === 'string' && anchorDate.length > 0),
+        ))
+
+        const message = anchoredDates.length === 1
+          ? t('common:itinerary.presentation.confirmAnchoredMoveWithDates', {
+              sourceDate: formatLocalDate(anchoredDates[0], i18n.language),
+              targetDate: formatLocalDate(itinerary.days.find((d) => d.dayNumber === targetDayNum)?.date ?? anchoredDates[0], i18n.language),
+            })
+          : t('common:itinerary.presentation.confirmAnchoredMove')
+
+        setPendingAnchoredMove({ updatedDays, message })
+        return
       }
 
-      // Update anchorDate for anchored activities moved to the target day
-      const movedSection = hasAnchored && targetDay.date
-        ? {
-            ...draggedSection,
-            activities: draggedSection.activities.map((a) =>
-              a.anchorDate != null ? { ...a, anchorDate: targetDay.date! } : a,
-            ),
-          }
-        : draggedSection
-
-      const newSourceSections = [...sourceSections]
-      newSourceSections.splice(sourceSectionIdx, 1)
-
-      const targetSections = [...groupActivitiesForPlanning(targetDay.activities).sections]
-      targetSections.splice(targetPosition, 0, movedSection)
-
-      const updatedDays = days.map((d) => {
-        if (d.dayNumber === sourceDayNum) return { ...d, activities: flattenSectionsToActivities(newSourceSections) }
-        if (d.dayNumber === targetDayNum) return { ...d, activities: flattenSectionsToActivities(targetSections) }
-        return d
-      })
       onReorder(updatedDays)
     }
-  }, [itinerary.days, onReorder])
+  }, [applyCrossDayMove, i18n.language, itinerary.days, onReorder, t])
+
+  const handleConfirmAnchoredMove = useCallback((): void => {
+    if (!pendingAnchoredMove) return
+    onReorder(pendingAnchoredMove.updatedDays)
+    setPendingAnchoredMove(null)
+  }, [onReorder, pendingAnchoredMove])
+
+  const handleCancelAnchoredMove = useCallback((): void => {
+    setPendingAnchoredMove(null)
+  }, [])
 
   return (
-    <div className="planning-view">
-      <p className="planning-view__hint">{t('common:itinerary.dayEditor.editDayHint')}</p>
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragEnd={handleDragEnd}
-      >
-        <ul className="itinerary-day-list">
-          {itinerary.days.map((day, index) => (
-            <DayRow
-              key={day.dayNumber}
-              day={day}
-              index={index}
-              itineraryId={itinerary.id}
-              totalDays={itinerary.days.length}
-            />
-          ))}
-        </ul>
-      </DndContext>
+    <>
+      <div className="planning-view">
+        <p className="planning-view__hint">{t('common:itinerary.dayEditor.editDayHint')}</p>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <ul className="itinerary-day-list">
+            {itinerary.days.map((day, index) => (
+              <DayRow
+                key={day.dayNumber}
+                day={day}
+                index={index}
+                itineraryId={itinerary.id}
+                totalDays={itinerary.days.length}
+              />
+            ))}
+          </ul>
+        </DndContext>
 
-      {reorderError && <p className="error">{t('common:itinerary.edit.saveFailed')}</p>}
-    </div>
+        {reorderError && <p className="error">{t('common:itinerary.edit.saveFailed')}</p>}
+      </div>
+
+      {pendingAnchoredMove ? (
+        <YesNoDialog
+          title={t('common:itinerary.presentation.confirmAnchoredMoveTitle')}
+          message={pendingAnchoredMove.message}
+          confirmLabel={t('common:itinerary.presentation.confirmAnchoredMoveAccept')}
+          cancelLabel={t('common:itinerary.presentation.confirmAnchoredMoveCancel')}
+          onConfirm={handleConfirmAnchoredMove}
+          onCancel={handleCancelAnchoredMove}
+        />
+      ) : null}
+    </>
   )
 }
 
