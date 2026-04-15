@@ -2458,27 +2458,18 @@ button:disabled {
   min-width: 0;
 }
 
-.planning-activity--anchored::before {
-  content: '';
-  position: absolute;
-  left: calc(-0.6rem + 0.5px);
-  top: 50%;
-  width: calc(0.6rem - 0.5px);
-  height: 1px;
-  background: var(--accent);
-  transform: translateY(-50%);
-}
+
 
 .planning-activity--anchored::after {
   content: '';
   position: absolute;
-  left: 0;
+  left: -7.5px;
   top: 50%;
   width: 0.36rem;
   height: 0.36rem;
   border-radius: 999px;
   background: var(--accent);
-  transform: translate(-50%, -50%);
+  transform: translateY(-50%);
 }
 
 .planning-activity__left {
