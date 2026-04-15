@@ -47,7 +47,7 @@ export function DayBlockEditor({
   const hasAnchoredActivities = section.activities.some((activity) => isActivityAnchored(activity))
   const hasDividerMarker = section.dividerId !== undefined || section.dividerLabel !== undefined
   const canBreak = section.activities.length > 1 && onBreakBlock
-  const visibleLabel = dividerLabel ?? (hasAnchoredActivities ? t('common:itinerary.presentation.anchored') : undefined)
+  const visibleLabel = dividerLabel
 
   const [editingLabel, setEditingLabel] = useState(false)
   const [labelDraft, setLabelDraft] = useState('')

@@ -82,7 +82,7 @@ function FlexibleBlock({ dayNumber, totalDays, blockIndex, blockCount, dividerLa
   const isSingleDay = totalDays <= 1
   const isSingleBlock = isSingleDay && blockCount <= 1
   const hasAnchoredActivities = activities.some((activity) => isActivityAnchored(activity))
-  const visibleLabel = dividerLabel ?? (hasAnchoredActivities ? t('common:itinerary.presentation.anchored') : undefined)
+  const visibleLabel = dividerLabel
 
   const { setNodeRef, transform, isDragging, listeners, attributes } = useDraggable({
     id: `flex-${dayNumber}-${blockIndex}`,
