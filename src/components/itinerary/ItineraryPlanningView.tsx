@@ -2,6 +2,7 @@ import type { ReactElement } from 'react'
 import { useCallback, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { PencilSimple } from '@phosphor-icons/react'
 import {
   DndContext,
   closestCenter,
@@ -233,6 +234,15 @@ function DayRow({ day, index, itineraryId, totalDays }: DayRowProps): ReactEleme
     >
       <div
         className="itinerary-day-header"
+        role="button"
+        tabIndex={0}
+        onClick={navigateToDay}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            navigateToDay()
+          }
+        }}
       >
         <div className="itinerary-day-header__left">
           <span className="itinerary-day-header__weekday">
@@ -254,8 +264,9 @@ function DayRow({ day, index, itineraryId, totalDays }: DayRowProps): ReactEleme
               navigateToDay()
             }}
             aria-label={t('common:itinerary.days.editDay')}
+            title={t('common:itinerary.days.editDay')}
           >
-            {t('common:itinerary.days.editDay')}
+            <PencilSimple size={16} weight="bold" />
           </button>
         </div>
       </div>

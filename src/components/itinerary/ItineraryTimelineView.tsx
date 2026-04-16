@@ -1,5 +1,6 @@
 import type { ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
+import { PencilSimple } from '@phosphor-icons/react'
 
 import type { ItineraryDetail, SharedItineraryDetail } from '@/services/contracts'
 import { formatLocalDate, formatWeekday } from '@/utils/date-format'
@@ -22,6 +23,15 @@ export function ItineraryTimelineView({ itinerary, onOpenDay }: ItineraryTimelin
         >
           <div
             className="itinerary-day-header"
+            role="button"
+            tabIndex={0}
+            onClick={() => onOpenDay && onOpenDay(day.dayNumber)}
+            onKeyDown={(e) => {
+              if ((e.key === 'Enter' || e.key === ' ') && onOpenDay) {
+                e.preventDefault()
+                onOpenDay(day.dayNumber)
+              }
+            }}
           >
             <div className="itinerary-day-header__left">
               <span className="itinerary-day-header__weekday">
@@ -44,8 +54,9 @@ export function ItineraryTimelineView({ itinerary, onOpenDay }: ItineraryTimelin
                     onOpenDay(day.dayNumber)
                   }}
                   aria-label={t('common:itinerary.days.editDay')}
+                  title={t('common:itinerary.days.editDay')}
                 >
-                  {t('common:itinerary.days.editDay')}
+                  <PencilSimple size={16} weight="bold" />
                 </button>
               ) : null}
             </div>
