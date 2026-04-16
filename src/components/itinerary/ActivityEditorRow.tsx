@@ -1,7 +1,7 @@
 import type { ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useDraggable } from '@dnd-kit/core'
-import { AnchorSimple, Star, Trash } from '@phosphor-icons/react'
+import { Star, Trash } from '@phosphor-icons/react'
 
 import type { ItineraryActivity } from '@/services/contracts'
 import { formatLocalTimeRange } from '@/utils/date-format'
@@ -69,15 +69,7 @@ export function ActivityEditorRow({
         >
           <GripIcon />
         </span>
-        {isAnchored ? (
-          <span
-            aria-label={t('common:itinerary.presentation.anchored')}
-            title={t('common:itinerary.presentation.anchored')}
-            style={{ display: 'inline-flex', alignItems: 'center', color: 'var(--accent)' }}
-          >
-            <AnchorSimple size={12} weight="bold" />
-          </span>
-        ) : null}
+        {/* anchored marker removed from activity pill; block-level triangle indicates anchoring */}
         <span className="activity-editor-row__type-icon" aria-label={activity.type} style={{ color: typeColor.icon }}>
           {ACTIVITY_TYPE_ICON[activity.type] ?? <Star size={18} />}
         </span>
