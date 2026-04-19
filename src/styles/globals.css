@@ -183,8 +183,9 @@ a {
 .app-shell > .home-panel,
 .profile-grid > .panel:first-child,
 .profile-grid > .panel:last-child {
-  --panel-globe-left: min(960px, calc(100% - 130px));
-  --panel-globe-size: 128px;
+  --panel-globe-left: min(960px, calc(100% - 105px));
+  --panel-globe-size: 100px;
+  --panel-globe-color: var(--accent);
   isolation: isolate;
   overflow: visible;
   position: relative;
@@ -204,8 +205,10 @@ a {
   left: var(--panel-globe-left);
   width: var(--panel-globe-size);
   aspect-ratio: 1;
-  background: url('../assets/globe.svg') center / contain no-repeat;
-  opacity: 1;
+  background-color: var(--panel-globe-color);
+  mask: url('../assets/globe.svg') center / contain no-repeat;
+  -webkit-mask: url('../assets/globe.svg') center / contain no-repeat;
+  opacity: 0.75;
   pointer-events: none;
   z-index: -1;
 }
