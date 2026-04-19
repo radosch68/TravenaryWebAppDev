@@ -1638,11 +1638,14 @@ button:disabled {
 .itinerary-day-list {
   list-style: none;
   padding: 0;
-  margin-left: calc(-1 * var(--space-5));
-  margin-right: calc(-1 * var(--space-5));
+  margin-left: calc(-1 * var(--space-5) - 1px);
+  margin-right: calc(-1 * var(--space-5) - 1px);
   display: grid;
   gap: 0;
-  background: #e8dbc2;
+  background: var(--bg-main);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  background-size: cover;
   padding-top: 0.7rem;
   padding-bottom: 0.7rem;
 }
@@ -3336,8 +3339,8 @@ button:disabled {
 
   /* Day list: match panel mobile padding so content aligns */
   .itinerary-day-list {
-    margin-left: calc(-1 * var(--space-3));
-    margin-right: calc(-1 * var(--space-3));
+    margin-left: calc(-1 * var(--space-3) - 1px);
+    margin-right: calc(-1 * var(--space-3) - 1px);
   }
 
   .itinerary-day-list__item {
