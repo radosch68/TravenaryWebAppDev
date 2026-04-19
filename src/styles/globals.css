@@ -175,6 +175,34 @@ a {
   overflow: hidden;
 }
 
+.auth-shell > .auth-card,
+.app-shell > .panel,
+.app-shell > .home-panel,
+.profile-grid > .panel:first-child {
+  isolation: isolate;
+  overflow: visible;
+  position: relative;
+  z-index: 1;
+}
+
+.auth-shell > .auth-card::before,
+.app-shell > .panel::before,
+.app-shell > .home-panel::before,
+.profile-grid > .panel:first-child::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: min(960px, calc(100% - 130px));
+  width: 128px;
+  aspect-ratio: 1;
+  background: url('../assets/globe.svg') center / contain no-repeat;
+  clip-path: inset(0 0 50% 0);
+  opacity: 1;
+  pointer-events: none;
+  transform: translateY(-50%);
+  z-index: -1;
+}
+
 .dashboard-content-padding {
   padding: 0 var(--space-4);
 }
