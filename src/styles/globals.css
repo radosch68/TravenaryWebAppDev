@@ -28,6 +28,9 @@ body {
   margin: 0;
   min-height: 100vh;
   background: var(--bg-main);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  background-size: cover;
   color: var(--text-main);
 }
 
@@ -178,7 +181,10 @@ a {
 .auth-shell > .auth-card,
 .app-shell > .panel,
 .app-shell > .home-panel,
-.profile-grid > .panel:first-child {
+.profile-grid > .panel:first-child,
+.profile-grid > .panel:last-child {
+  --panel-globe-left: min(960px, calc(100% - 130px));
+  --panel-globe-size: 128px;
   isolation: isolate;
   overflow: visible;
   position: relative;
@@ -188,19 +194,38 @@ a {
 .auth-shell > .auth-card::before,
 .app-shell > .panel::before,
 .app-shell > .home-panel::before,
-.profile-grid > .panel:first-child::before {
+.profile-grid > .panel:first-child::before,
+.auth-shell > .auth-card::after,
+.app-shell > .panel::after,
+.app-shell > .home-panel::after,
+.profile-grid > .panel:last-child::after {
   content: '';
   position: absolute;
-  top: 0;
-  left: min(960px, calc(100% - 130px));
-  width: 128px;
+  left: var(--panel-globe-left);
+  width: var(--panel-globe-size);
   aspect-ratio: 1;
   background: url('../assets/globe.svg') center / contain no-repeat;
-  clip-path: inset(0 0 50% 0);
   opacity: 1;
   pointer-events: none;
-  transform: translateY(-50%);
   z-index: -1;
+}
+
+.auth-shell > .auth-card::before,
+.app-shell > .panel::before,
+.app-shell > .home-panel::before,
+.profile-grid > .panel:first-child::before {
+  top: 0;
+  clip-path: inset(0 0 50% 0);
+  transform: translateY(-50%);
+}
+
+.auth-shell > .auth-card::after,
+.app-shell > .panel::after,
+.app-shell > .home-panel::after,
+.profile-grid > .panel:last-child::after {
+  bottom: 0;
+  clip-path: inset(50% 0 0 0);
+  transform: translateY(50%);
 }
 
 .dashboard-content-padding {
