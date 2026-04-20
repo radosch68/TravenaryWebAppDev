@@ -1,5 +1,8 @@
 import { apiRequest } from '@/services/api-client'
 import type {
+  DeleteItineraryDayRequest,
+  InsertItineraryDayRequest,
+  ItineraryDayInput,
   ItineraryDetail,
   ItineraryListParams,
   ItineraryListResponse,
@@ -51,6 +54,20 @@ export async function createItineraryFromTemplate(): Promise<ItineraryDetail> {
   })
 }
 
+export interface CreateManualItineraryRequest {
+  title: string
+  startDate?: string
+  days?: ItineraryDayInput[]
+}
+
+export async function createManualItinerary(payload: CreateManualItineraryRequest): Promise<ItineraryDetail> {
+  return apiRequest<ItineraryDetail>('/itineraries', {
+    method: 'POST',
+    body: payload,
+    protected: true,
+  })
+}
+
 export async function getItinerary(itineraryId: string): Promise<ItineraryDetail> {
   return apiRequest<ItineraryDetail>(`/itineraries/${itineraryId}`, {
     method: 'GET',
@@ -73,6 +90,28 @@ export async function updateItinerary(
 ): Promise<ItineraryDetail> {
   return apiRequest<ItineraryDetail>(`/itineraries/${itineraryId}`, {
     method: 'PATCH',
+    body: data,
+    protected: true,
+  })
+}
+
+export async function insertItineraryDay(
+  itineraryId: string,
+  data: InsertItineraryDayRequest,
+): Promise<ItineraryDetail> {
+  return apiRequest<ItineraryDetail>(`/itineraries/${itineraryId}/days/insert`, {
+    method: 'POST',
+    body: data,
+    protected: true,
+  })
+}
+
+export async function deleteItineraryDay(
+  itineraryId: string,
+  data: DeleteItineraryDayRequest,
+): Promise<ItineraryDetail> {
+  return apiRequest<ItineraryDetail>(`/itineraries/${itineraryId}/days/delete`, {
+    method: 'POST',
     body: data,
     protected: true,
   })

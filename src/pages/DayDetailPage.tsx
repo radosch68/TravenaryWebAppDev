@@ -153,7 +153,7 @@ export function DayDetailPage(): ReactElement {
 
       setSaveError(t('common:itinerary.dayEditor.saveFailed'))
     }
-  }, [itinerary, itineraryId, dayNum, day?.summary, pendingDaySummary, getFlatActivities, applyServerState, t])
+  }, [itinerary, itineraryId, dayNum, day, pendingDaySummary, getFlatActivities, applyServerState, t])
 
   const handleActivityEdit = useCallback((activityId: string): void => {
     setEditingActivityId(activityId)
@@ -323,6 +323,10 @@ export function DayDetailPage(): ReactElement {
     )
   }
 
+  const dayTitle = day.date
+    ? `${formatWeekday(day.date, i18n.language)} ${formatLocalDate(day.date, i18n.language)}`
+    : `— ${t('common:itinerary.missingDate')}`
+
   return (
     <main className="app-shell">
       <Header />
@@ -333,7 +337,7 @@ export function DayDetailPage(): ReactElement {
             label: itinerary.title,
             onClick: () => handleNavigateAway(`/itineraries/${itinerary.id}`),
           },
-          { label: t('common:itinerary.dayNumber', { dayNumber: day.dayNumber }) },
+          { label: dayTitle },
         ]}
       />
       <section className="panel day-detail-panel">
@@ -343,10 +347,7 @@ export function DayDetailPage(): ReactElement {
             onClick={() => handleNavigateAway(`/itineraries/${itinerary.id}`)}
           />
         </div>
-        <h1 className="day-detail-panel__heading">
-          {day.date ? formatWeekday(day.date, i18n.language) : '—'}{' '}
-          {day.date ? formatLocalDate(day.date, i18n.language) : t('common:itinerary.missingDate')}
-        </h1>
+        <h1 className="day-detail-panel__heading">{dayTitle}</h1>
 
         {saveError ? (
           <div className="button-row" role="alert">
@@ -486,4 +487,3 @@ function CloseIcon(): ReactElement {
     </svg>
   )
 }
-

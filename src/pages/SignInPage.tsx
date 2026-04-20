@@ -181,7 +181,9 @@ export function SignInPage(): ReactElement {
 
   return (
     <main className="auth-shell">
-      <BrandLanguageHeader />
+      <header className="topbar">
+        <BrandLanguageHeader variant="topbar" />
+      </header>
       <section className="auth-card">
         <h1>{t('auth:signIn.title')}</h1>
         <p>{t('auth:signIn.subtitle')}</p>

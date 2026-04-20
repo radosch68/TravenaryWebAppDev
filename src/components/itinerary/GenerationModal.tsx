@@ -2,7 +2,7 @@ import type { ReactElement } from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { ArrowCounterClockwise } from '@phosphor-icons/react'
+import { ArrowCounterClockwise, Sparkle } from '@phosphor-icons/react'
 import { DialogShell } from '@/components/DialogShell'
 import { DashboardPaginationBar } from '@/components/DashboardPaginationBar'
 import { DraftReviewCarousel } from '@/components/itinerary/DraftReviewCarousel'
@@ -15,6 +15,7 @@ import {
   getTimeoutForModel,
   POLL_INTERVAL_MS,
 } from '@/services/ai-generation.service'
+import { createManualItinerary } from '@/services/itinerary-service'
 import { ApiError } from '@/services/contracts'
 import genStyles from './GenerationModal.module.css'
 import type {
@@ -24,6 +25,7 @@ import type {
   TravelerProfileValue,
   BudgetProfileValue,
   GenerationContextOptions,
+  ItineraryDayInput,
 } from '@/services/contracts'
 
 const DEPTH_VALUES: OutputDepth[] = ['fast', 'balanced', 'detailed']
@@ -39,6 +41,8 @@ type ModalStep =
   | 'review'
   | 'saving'
   | 'error'
+
+type CreateMode = 'ai' | 'manual'
 
 interface GenerationModalProps {
   onClose: () => void
@@ -165,12 +169,95 @@ function clearLastGenerationRequestId(): void {
   localStorage.removeItem(LAST_REQUEST_ID_KEY)
 }
 
+const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/
+const DAY_MS = 24 * 60 * 60 * 1000
+const MAX_MANUAL_DAY_COUNT = 365
+
+function parseIsoDateToUtcEpoch(value: string): number | null {
+  if (!ISO_DATE_REGEX.test(value)) {
+    return null
+  }
+
+  const [yearRaw, monthRaw, dayRaw] = value.split('-')
+  const year = Number.parseInt(yearRaw, 10)
+  const month = Number.parseInt(monthRaw, 10)
+  const day = Number.parseInt(dayRaw, 10)
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) {
+    return null
+  }
+
+  const epoch = Date.UTC(year, month - 1, day)
+  const parsed = new Date(epoch)
+  if (
+    parsed.getUTCFullYear() !== year
+    || parsed.getUTCMonth() !== month - 1
+    || parsed.getUTCDate() !== day
+  ) {
+    return null
+  }
+
+  return epoch
+}
+
+function formatLocalDateInput(date: Date): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function createDefaultManualDateRange(): { dateFrom: string; dateTo: string } {
+  const today = new Date()
+  const todayNormalized = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+  const dateFrom = formatLocalDateInput(todayNormalized)
+  const dateToDate = new Date(todayNormalized)
+  dateToDate.setDate(dateToDate.getDate() + 2)
+  const dateTo = formatLocalDateInput(dateToDate)
+  return { dateFrom, dateTo }
+}
+
+function deriveManualDayCount(dateFrom: string, dateTo: string): number | null {
+  const fromEpoch = parseIsoDateToUtcEpoch(dateFrom)
+  const toEpoch = parseIsoDateToUtcEpoch(dateTo)
+  if (fromEpoch === null || toEpoch === null || toEpoch < fromEpoch) {
+    return null
+  }
+  return Math.floor((toEpoch - fromEpoch) / DAY_MS) + 1
+}
+
+function buildManualDays(dateFrom: string, dateTo: string): ItineraryDayInput[] | undefined {
+  if (!dateFrom) {
+    return undefined
+  }
+
+  if (!dateTo) {
+    return [{ dayNumber: 1, activities: [] }]
+  }
+
+  const dayCount = deriveManualDayCount(dateFrom, dateTo)
+  if (!dayCount || dayCount < 1) {
+    return undefined
+  }
+
+  return Array.from({ length: dayCount }, (_, index) => ({
+    dayNumber: index + 1,
+    activities: [],
+  }))
+}
+
 export function GenerationModal({ onClose, onFallback }: GenerationModalProps): ReactElement {
   const { t } = useTranslation(['ai-generation', 'common'])
   const navigate = useNavigate()
+  const defaultManualDates = useRef(createDefaultManualDateRange())
 
+  const [createMode, setCreateMode] = useState<CreateMode>('ai')
   const [step, setStep] = useState<ModalStep>('input')
   const [prompt, setPrompt] = useState('')
+  const [manualTitle, setManualTitle] = useState('')
+  const [manualDateFrom, setManualDateFrom] = useState(defaultManualDates.current.dateFrom)
+  const [manualDateTo, setManualDateTo] = useState(defaultManualDates.current.dateTo)
+  const [manualError, setManualError] = useState<string | null>(null)
+  const [isManualSubmitting, setIsManualSubmitting] = useState(false)
   const [availableModels, setAvailableModels] = useState<ModelInfo[]>([])
   const [selectedModel, setSelectedModel] = useState('')
   const [selectedPromptPreset, setSelectedPromptPreset] = useState('')
@@ -211,6 +298,7 @@ export function GenerationModal({ onClose, onFallback }: GenerationModalProps): 
   const pollTimerRef = useRef<number | null>(null)
   const countdownTimerRef = useRef<number | null>(null)
   const deadlineRef = useRef<number>(0)
+  const executePollRef = useRef<((reqId: string, signal: AbortSignal) => Promise<void>) | null>(null)
   const isMountedRef = useRef(true)
 
   const clearTimers = useCallback((): void => {
@@ -282,7 +370,7 @@ export function GenerationModal({ onClose, onFallback }: GenerationModalProps): 
 
     // Auto-poll after POLL_INTERVAL_MS
     pollTimerRef.current = window.setTimeout(() => {
-      void executePoll(reqId, signal)
+      void executePollRef.current?.(reqId, signal)
     }, POLL_INTERVAL_MS)
   }, [clearTimers, t])
 
@@ -308,6 +396,10 @@ export function GenerationModal({ onClose, onFallback }: GenerationModalProps): 
       setStep('error')
     }
   }, [clearTimers, handlePollResult, schedulePollCycle, t])
+
+  useEffect(() => {
+    executePollRef.current = executePoll
+  }, [executePoll])
 
   const handleCheckNow = useCallback((): void => {
     if (!generationRequestId || !abortControllerRef.current) return
@@ -697,8 +789,60 @@ export function GenerationModal({ onClose, onFallback }: GenerationModalProps): 
     })
   }
 
+  const isInputStep = step === 'input' || (step === 'error' && !generationRequestId)
+  const manualDatesMissing = !manualDateFrom || !manualDateTo
+  const manualDateRequiredError = manualDatesMissing ? t('ai-generation:modal.manualDatesRequired') : null
+  const manualDateRangeError = manualDateFrom && manualDateTo && manualDateTo < manualDateFrom
+    ? t('ai-generation:modal.manualDateRangeError')
+    : null
+  const manualDayCount = manualDateFrom && manualDateTo ? deriveManualDayCount(manualDateFrom, manualDateTo) : null
+  const manualDayCountLimitError = manualDayCount && manualDayCount > MAX_MANUAL_DAY_COUNT
+    ? t('ai-generation:modal.manualDayCountLimitError', { count: MAX_MANUAL_DAY_COUNT })
+    : null
+  const manualInlineError = manualDateRequiredError ?? manualDateRangeError ?? manualDayCountLimitError ?? manualError
+
+  const handleManualCreate = async (): Promise<void> => {
+    if (manualDateRequiredError || manualDateRangeError || manualDayCountLimitError) {
+      setManualError(manualDateRequiredError ?? manualDateRangeError ?? manualDayCountLimitError)
+      return
+    }
+
+    setManualError(null)
+    setIsManualSubmitting(true)
+
+    const fallbackTitle = t('ai-generation:modal.manualFallbackTitle')
+    const title = manualTitle.trim() || fallbackTitle
+    const days = buildManualDays(manualDateFrom, manualDateTo)
+
+    try {
+      await createManualItinerary({
+        title,
+        startDate: manualDateFrom,
+        ...(days ? { days } : {}),
+      })
+      onClose()
+    } catch (err: unknown) {
+      setManualError(resolveErrorMessage(err, t))
+    } finally {
+      setIsManualSubmitting(false)
+    }
+  }
+
   const footerContent = (() => {
-    if (step === 'input' || (step === 'error' && !generationRequestId)) {
+    if (isInputStep && createMode === 'manual') {
+      return (
+        <button
+          type="button"
+          className="generation-modal__submit"
+          onClick={() => void handleManualCreate()}
+          disabled={isManualSubmitting || manualDateRequiredError !== null || manualDateRangeError !== null || manualDayCountLimitError !== null}
+        >
+          {isManualSubmitting ? t('common:pending') : t('ai-generation:modal.manualCreateButton')}
+        </button>
+      )
+    }
+
+    if (isInputStep) {
       return (
         <button
           type="button"
@@ -829,8 +973,37 @@ export function GenerationModal({ onClose, onFallback }: GenerationModalProps): 
       footer={reviewFooter ?? footerContent}
       headerExtra={paginationBar}
     >
+      {isInputStep ? (
+        <div className="generation-modal__mode-tabs" role="tablist" aria-label={t('ai-generation:modal.modeTabsAriaLabel')}>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={createMode === 'ai'}
+            className={`generation-modal__mode-tab${createMode === 'ai' ? ' generation-modal__mode-tab--active' : ''}`}
+            onClick={() => {
+              setCreateMode('ai')
+              setManualError(null)
+            }}
+          >
+            <Sparkle size={14} weight="fill" aria-hidden="true" />
+            <span>{t('ai-generation:modal.modeAi')}</span>
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={createMode === 'manual'}
+            className={`generation-modal__mode-tab${createMode === 'manual' ? ' generation-modal__mode-tab--active' : ''}`}
+            onClick={() => {
+              setCreateMode('manual')
+              setErrorMessage(null)
+            }}
+          >
+            <span>{t('ai-generation:modal.modeManual')}</span>
+          </button>
+        </div>
+      ) : null}
 
-        {resumeRequestId && (step === 'input' || (step === 'error' && !generationRequestId)) ? (
+      {createMode === 'ai' && resumeRequestId && isInputStep ? (
           <div className="generation-modal__resume-panel" aria-live="polite">
             <div className="generation-modal__resume-info">
               <span className="generation-modal__resume-title">
@@ -851,10 +1024,10 @@ export function GenerationModal({ onClose, onFallback }: GenerationModalProps): 
                 : t('ai-generation:modal.resumeCta')}
             </button>
           </div>
-        ) : null}
+      ) : null}
 
-        <div className="generation-modal__body">
-          {(step === 'input' || (step === 'error' && !generationRequestId)) && (
+      <div className="generation-modal__body">
+        {isInputStep && createMode === 'ai' && (
             <>
               <div className="generation-modal__prompt-header">
                 <label htmlFor="generation-prompt" className="generation-modal__label">
@@ -1233,6 +1406,77 @@ export function GenerationModal({ onClose, onFallback }: GenerationModalProps): 
             </>
           )}
 
+        {isInputStep && createMode === 'manual' ? (
+          <div className="generation-modal__manual">
+            <div className="generation-modal__manual-row">
+              <label htmlFor="manual-title" className="generation-modal__label">
+                {t('ai-generation:modal.manualTitleLabel')}
+              </label>
+              <input
+                id="manual-title"
+                type="text"
+                className="generation-modal__manual-input"
+                value={manualTitle}
+                onChange={(event) => {
+                  setManualTitle(event.target.value)
+                  setManualError(null)
+                }}
+                placeholder={t('ai-generation:modal.manualTitlePlaceholder')}
+                maxLength={140}
+              />
+            </div>
+            <div className="generation-modal__manual-grid">
+              <div className="generation-modal__manual-row">
+                <label htmlFor="manual-date-from" className="generation-modal__label">
+                  {t('ai-generation:modal.manualDateFromLabel')}
+                </label>
+                <input
+                  id="manual-date-from"
+                  type="date"
+                  className="generation-modal__manual-input"
+                  value={manualDateFrom}
+                  onChange={(event) => {
+                    const nextDateFrom = event.target.value
+                    setManualDateFrom(nextDateFrom)
+                    setManualError(null)
+                    if (nextDateFrom && manualDateTo && manualDateTo < nextDateFrom) {
+                      setManualDateTo(nextDateFrom)
+                    }
+                  }}
+                  required
+                />
+              </div>
+              <div className="generation-modal__manual-row">
+                <label htmlFor="manual-date-to" className="generation-modal__label">
+                  {t('ai-generation:modal.manualDateToLabel')}
+                </label>
+                <input
+                  id="manual-date-to"
+                  type="date"
+                  className="generation-modal__manual-input"
+                  value={manualDateTo}
+                  onChange={(event) => {
+                    setManualDateTo(event.target.value)
+                    setManualError(null)
+                  }}
+                  min={manualDateFrom || undefined}
+                  required
+                />
+              </div>
+            </div>
+
+            {manualDayCount ? (
+              <p className="generation-modal__manual-hint">
+                {t('ai-generation:modal.manualDayCount', { count: manualDayCount })}
+              </p>
+            ) : null}
+
+            {manualInlineError ? (
+              <p className="error generation-modal__error">{manualInlineError}</p>
+            ) : null}
+          </div>
+        ) : null}
+
           {step === 'loading' && (
             <div className="generation-modal__loading">
               <p className="generation-modal__loading-text">
@@ -1274,8 +1518,7 @@ export function GenerationModal({ onClose, onFallback }: GenerationModalProps): 
               <p className="error">{errorMessage ?? t('ai-generation:modal.errorTitle')}</p>
             </div>
           )}
-        </div>
-
+      </div>
     </DialogShell>
   )
 }

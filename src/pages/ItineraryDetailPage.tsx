@@ -9,14 +9,31 @@ import { EditableField } from '@/components/EditableField'
 import { ShareButton } from '@/components/ShareButton'
 import { ItineraryPlanningView } from '@/components/itinerary/ItineraryPlanningView'
 import { ItineraryTimelineView } from '@/components/itinerary/ItineraryTimelineView'
+import { AnchoredShiftConflictDialog, DeleteDayDialog, InsertDayDialog } from '@/components/itinerary/ItineraryDayDialogs'
 import { ApiError } from '@/services/contracts'
-import { deleteItinerary, getItinerary, updateItinerary } from '@/services/itinerary-service'
-import type { ItineraryActivity, ItineraryActivityInput, ItineraryDay, UpdateItineraryRequest, ItineraryDetail } from '@/services/contracts'
+import { deleteItinerary, deleteItineraryDay, getItinerary, insertItineraryDay, updateItinerary } from '@/services/itinerary-service'
+import type {
+  DeleteItineraryDayMode,
+  ItineraryActivity,
+  ItineraryActivityInput,
+  ItineraryDay,
+  UpdateItineraryRequest,
+  ItineraryDetail,
+} from '@/services/contracts'
 import { formatLocalDate } from '@/utils/date-format'
 import { unsplashUrl } from '@/utils/unsplash-url'
 import { PencilSimple } from '@phosphor-icons/react'
 
 type PresentationMode = 'planning' | 'timeline'
+const PRESENTATION_MODE_STORAGE_KEY = 'itinerary-detail-presentation-mode'
+
+type AnchoredShiftConflict = {
+  dayNumber: number
+  dayDate?: string
+  activityId: string
+  activityTitle: string
+  anchorDate: string
+}
 
 export function ItineraryDetailPage(): ReactElement {
   const { itineraryId } = useParams<{ itineraryId: string }>()
@@ -33,6 +50,20 @@ export function ItineraryDetailPage(): ReactElement {
   const [reorderError, setReorderError] = useState(false)
   const [dateConflictError, setDateConflictError] = useState(false)
   const [presentationMode, setPresentationMode] = useState<PresentationMode>('planning')
+  const [insertDayNumber, setInsertDayNumber] = useState<number | null>(null)
+  const [insertDaySummary, setInsertDaySummary] = useState('')
+  const [insertDayBusy, setInsertDayBusy] = useState(false)
+  const [insertDayError, setInsertDayError] = useState<string | null>(null)
+  const [deleteDayNumber, setDeleteDayNumber] = useState<number | null>(null)
+  const [deleteDayMode, setDeleteDayMode] = useState<DeleteItineraryDayMode>('delete')
+  const [deleteTargetDayNumber, setDeleteTargetDayNumber] = useState<number | undefined>(undefined)
+  const [deleteDayBusy, setDeleteDayBusy] = useState(false)
+  const [deleteDayError, setDeleteDayError] = useState<string | null>(null)
+  const [anchoredShiftConflict, setAnchoredShiftConflict] = useState<{
+    operation: 'add' | 'remove' | 'date'
+    pivotDateLabel?: string
+    conflicts: AnchoredShiftConflict[]
+  } | null>(null)
 
   const patchItinerary = useCallback(
     async (data: UpdateItineraryRequest): Promise<void> => {
@@ -133,6 +164,34 @@ export function ItineraryDetailPage(): ReactElement {
     })
   }, [itineraryId, state])
 
+  useEffect(() => {
+    if (!itineraryId) {
+      setPresentationMode('planning')
+      return
+    }
+
+    try {
+      const raw = window.sessionStorage.getItem(PRESENTATION_MODE_STORAGE_KEY)
+      if (!raw) {
+        setPresentationMode('planning')
+        return
+      }
+
+      const parsed = JSON.parse(raw) as { itineraryId?: unknown; mode?: unknown }
+      if (
+        parsed.itineraryId === itineraryId
+        && (parsed.mode === 'planning' || parsed.mode === 'timeline')
+      ) {
+        setPresentationMode(parsed.mode)
+        return
+      }
+    } catch {
+      // Ignore parse/storage errors and default to planning mode.
+    }
+
+    setPresentationMode('planning')
+  }, [itineraryId])
+
   const handleDelete = async (): Promise<void> => {
     if (!itineraryId) {
       return
@@ -159,6 +218,23 @@ export function ItineraryDetailPage(): ReactElement {
     navigate(dashboardReturnUrl)
   }, [dashboardReturnUrl, navigate])
 
+  const handleSetPresentationMode = useCallback((mode: PresentationMode): void => {
+    setPresentationMode(mode)
+
+    if (!itineraryId) {
+      return
+    }
+
+    try {
+      window.sessionStorage.setItem(
+        PRESENTATION_MODE_STORAGE_KEY,
+        JSON.stringify({ itineraryId, mode }),
+      )
+    } catch {
+      // Ignore storage write errors and keep in-memory mode.
+    }
+  }, [itineraryId])
+
   const handleOpenDayDetail = useCallback((dayNumber: number): void => {
     if (!itineraryId) {
       return
@@ -173,6 +249,143 @@ export function ItineraryDetailPage(): ReactElement {
 
     navigate(`/itineraries/${itineraryId}/days/${dayNumber}`)
   }, [itineraryId, navigate])
+
+  const handleOpenInsertDayDialog = useCallback((dayNumber: number): void => {
+    if (itinerary) {
+      const conflicts = collectAnchoredShiftConflicts(itinerary.days, dayNumber)
+      if (conflicts.length > 0) {
+        const pivotDateLabel = getPivotDateLabel(itinerary.days, dayNumber, i18n.language, t)
+        setAnchoredShiftConflict({
+          operation: 'add',
+          pivotDateLabel,
+          conflicts,
+        })
+        return
+      }
+    }
+
+    setInsertDayNumber(dayNumber)
+    setInsertDaySummary('')
+    setInsertDayError(null)
+  }, [i18n.language, itinerary, t])
+
+  const maybeOpenDateShiftConflict = useCallback((nextStartDate: string | null): boolean => {
+    if (!itinerary) {
+      return false
+    }
+
+    const conflicts = collectAnchoredDateChangeConflicts(itinerary.days, itinerary.startDate, nextStartDate)
+    if (conflicts.length === 0) {
+      return false
+    }
+
+    setAnchoredShiftConflict({
+      operation: 'date',
+      conflicts,
+    })
+    return true
+  }, [itinerary])
+
+  const handleCloseInsertDayDialog = useCallback((): void => {
+    if (insertDayBusy) {
+      return
+    }
+    setInsertDayNumber(null)
+    setInsertDaySummary('')
+    setInsertDayError(null)
+  }, [insertDayBusy])
+
+  const handleConfirmInsertDay = useCallback(async (): Promise<void> => {
+    if (!itineraryId || insertDayNumber == null) {
+      return
+    }
+
+    setInsertDayBusy(true)
+    setInsertDayError(null)
+
+    try {
+      const updated = await insertItineraryDay(itineraryId, {
+        dayNumber: insertDayNumber,
+        summary: insertDaySummary.trim() || undefined,
+      })
+      setItinerary(updated)
+      setInsertDayNumber(null)
+      setInsertDaySummary('')
+    } catch (error) {
+      if (error instanceof ApiError) {
+        setInsertDayError(error.message)
+      } else {
+        setInsertDayError(t('common:itinerary.days.mutationFailed'))
+      }
+    } finally {
+      setInsertDayBusy(false)
+    }
+  }, [insertDayNumber, insertDaySummary, itineraryId, t])
+
+  const handleOpenDeleteDayDialog = useCallback((dayNumber: number): void => {
+    if (itinerary) {
+      const conflicts = collectAnchoredShiftConflicts(itinerary.days, dayNumber)
+      if (conflicts.length > 0) {
+        const pivotDateLabel = getPivotDateLabel(itinerary.days, dayNumber, i18n.language, t)
+        setAnchoredShiftConflict({
+          operation: 'remove',
+          pivotDateLabel,
+          conflicts,
+        })
+        return
+      }
+    }
+
+    setDeleteDayNumber(dayNumber)
+    setDeleteDayMode('delete')
+    setDeleteDayError(null)
+    setDeleteDayBusy(false)
+    setDeleteTargetDayNumber(undefined)
+  }, [i18n.language, itinerary, t])
+
+  const handleCloseDeleteDayDialog = useCallback((): void => {
+    if (deleteDayBusy) {
+      return
+    }
+    setDeleteDayNumber(null)
+    setDeleteDayMode('delete')
+    setDeleteTargetDayNumber(undefined)
+    setDeleteDayError(null)
+  }, [deleteDayBusy])
+
+  const handleConfirmDeleteDay = useCallback(async (): Promise<void> => {
+    if (!itineraryId || deleteDayNumber == null) {
+      return
+    }
+
+    if (deleteDayMode === 'move' && deleteTargetDayNumber == null) {
+      setDeleteDayError(t('common:itinerary.days.selectTargetDay'))
+      return
+    }
+
+    setDeleteDayBusy(true)
+    setDeleteDayError(null)
+
+    try {
+      const updated = await deleteItineraryDay(itineraryId, {
+        dayNumber: deleteDayNumber,
+        mode: deleteDayMode,
+        ...(deleteDayMode === 'move' ? { targetDayNumber: deleteTargetDayNumber } : {}),
+      })
+      setItinerary(updated)
+      setDeleteDayNumber(null)
+      setDeleteDayMode('delete')
+      setDeleteTargetDayNumber(undefined)
+    } catch (error) {
+      if (error instanceof ApiError) {
+        setDeleteDayError(error.message)
+      } else {
+        setDeleteDayError(t('common:itinerary.days.mutationFailed'))
+      }
+    } finally {
+      setDeleteDayBusy(false)
+    }
+  }, [deleteDayMode, deleteDayNumber, deleteTargetDayNumber, itineraryId, t])
 
   if (state === 'loading') {
     return (
@@ -215,6 +428,20 @@ export function ItineraryDetailPage(): ReactElement {
       </main>
     )
   }
+
+  const selectedDeleteDay = deleteDayNumber != null
+    ? itinerary.days.find((item) => item.dayNumber === deleteDayNumber) ?? null
+    : null
+  const insertDayDateIso = insertDayNumber != null
+    ? deriveInsertedDayDateIso(itinerary, insertDayNumber)
+    : undefined
+  const insertDayDateLabel = insertDayDateIso
+    ? formatLocalDate(insertDayDateIso, i18n.language)
+    : t('common:itinerary.missingDate')
+  const defaultDeleteTargetDayNumber = selectedDeleteDay
+    ? itinerary.days.find((candidate) => candidate.dayNumber !== selectedDeleteDay.dayNumber)?.dayNumber
+    : undefined
+  const resolvedDeleteTargetDayNumber = deleteTargetDayNumber ?? defaultDeleteTargetDayNumber
 
   return (
     <main className="app-shell">
@@ -384,8 +611,12 @@ export function ItineraryDetailPage(): ReactElement {
               value={itinerary.startDate ?? ''}
               onSave={async (v) => {
                 setDateConflictError(false)
+                const nextStartDate = normalizeOptionalIsoDate(v)
+                if (maybeOpenDateShiftConflict(nextStartDate)) {
+                  return
+                }
                 try {
-                  await patchItinerary({ startDate: v || null })
+                  await patchItinerary({ startDate: nextStartDate })
                 } catch (err) {
                   if (err instanceof ApiError && err.status === 409) {
                     setDateConflictError(true)
@@ -433,20 +664,13 @@ export function ItineraryDetailPage(): ReactElement {
               value={itinerary.endDate ?? ''}
               onSave={async (v) => {
                 setDateConflictError(false)
+                const dayCount = itinerary.days.length
+                const nextStartDate = deriveStartDateFromEndDateInput(v, dayCount)
+                if (maybeOpenDateShiftConflict(nextStartDate)) {
+                  return
+                }
                 try {
-                  if (!v) {
-                    await patchItinerary({ startDate: null })
-                    return
-                  }
-                  const dayCount = itinerary.days.length
-                  if (dayCount <= 1) {
-                    await patchItinerary({ startDate: v })
-                    return
-                  }
-                  const endMs = new Date(v + 'T00:00:00Z').getTime()
-                  const newStartMs = endMs - (dayCount - 1) * 86_400_000
-                  const newStart = new Date(newStartMs).toISOString().slice(0, 10)
-                  await patchItinerary({ startDate: newStart })
+                  await patchItinerary({ startDate: nextStartDate })
                 } catch (err) {
                   if (err instanceof ApiError && err.status === 409) {
                     setDateConflictError(true)
@@ -490,14 +714,14 @@ export function ItineraryDetailPage(): ReactElement {
               <button
                 type="button"
                 className={`presentation-toggle__btn${presentationMode === 'planning' ? ' presentation-toggle__btn--active' : ''}`}
-                onClick={() => setPresentationMode('planning')}
+                onClick={() => handleSetPresentationMode('planning')}
               >
                 {t('common:itinerary.presentation.planning')}
               </button>
               <button
                 type="button"
                 className={`presentation-toggle__btn${presentationMode === 'timeline' ? ' presentation-toggle__btn--active' : ''}`}
-                onClick={() => setPresentationMode('timeline')}
+                onClick={() => handleSetPresentationMode('timeline')}
               >
                 {t('common:itinerary.presentation.timeline')}
               </button>
@@ -512,10 +736,15 @@ export function ItineraryDetailPage(): ReactElement {
           <ItineraryPlanningView
             itinerary={itinerary}
             onReorder={handlePlanningReorder}
+            onInsertDay={handleOpenInsertDayDialog}
+            onDeleteDay={handleOpenDeleteDayDialog}
             reorderError={reorderError}
           />
         ) : (
-          <ItineraryTimelineView itinerary={itinerary} onOpenDay={handleOpenDayDetail} />
+          <ItineraryTimelineView
+            itinerary={itinerary}
+            onOpenDay={handleOpenDayDetail}
+          />
         )}
 
         {reorderError && presentationMode !== 'planning' ? <p className="error">{t('common:itinerary.edit.saveFailed')}</p> : null}
@@ -559,6 +788,59 @@ export function ItineraryDetailPage(): ReactElement {
           <PanelCloseButton ariaLabel={t('common:itinerary.backToDashboard')} onClick={handleNavigateBackToDashboard} />
         </div>
       </section>
+
+      {insertDayNumber != null ? (
+        <InsertDayDialog
+          dayDateLabel={insertDayDateLabel}
+          summary={insertDaySummary}
+          busy={insertDayBusy}
+          errorMessage={insertDayError}
+          onSummaryChange={setInsertDaySummary}
+          onCancel={handleCloseInsertDayDialog}
+          onConfirm={() => void handleConfirmInsertDay()}
+        />
+      ) : null}
+
+      {selectedDeleteDay ? (
+        <DeleteDayDialog
+          day={selectedDeleteDay}
+          days={itinerary.days}
+          mode={deleteDayMode}
+          targetDayNumber={resolvedDeleteTargetDayNumber}
+          busy={deleteDayBusy}
+          errorMessage={deleteDayError}
+          onModeChange={(mode) => {
+            setDeleteDayMode(mode)
+            if (mode === 'delete') {
+              setDeleteTargetDayNumber(undefined)
+            } else {
+              setDeleteTargetDayNumber((current) => current ?? defaultDeleteTargetDayNumber)
+            }
+          }}
+          onTargetDayNumberChange={setDeleteTargetDayNumber}
+          onCancel={handleCloseDeleteDayDialog}
+          onConfirm={() => void handleConfirmDeleteDay()}
+        />
+      ) : null}
+
+      {anchoredShiftConflict ? (
+        <AnchoredShiftConflictDialog
+          title={
+            anchoredShiftConflict.operation === 'add'
+              ? t('common:itinerary.days.aaConflictAddTitle', { date: anchoredShiftConflict.pivotDateLabel })
+              : anchoredShiftConflict.operation === 'remove'
+                ? t('common:itinerary.days.aaConflictDeleteTitle', { date: anchoredShiftConflict.pivotDateLabel })
+                : t('common:itinerary.days.aaConflictDateChangeTitle')
+          }
+          message={t('common:itinerary.days.aaConflictMessage')}
+          conflicts={anchoredShiftConflict.conflicts.map((conflict) => ({
+            activityId: conflict.activityId,
+            activityTitle: conflict.activityTitle,
+            anchorDateLabel: formatLocalDate(conflict.anchorDate, i18n.language),
+          }))}
+          onClose={() => setAnchoredShiftConflict(null)}
+        />
+      ) : null}
     </main>
   )
 }
@@ -596,6 +878,123 @@ function buildDayPayload(days: ItineraryDay[]): UpdateItineraryRequest['days'] {
 
 function toActivityInput(activity: ItineraryActivity): ItineraryActivityInput {
   return activity
+}
+
+function deriveInsertedDayDateIso(itinerary: ItineraryDetail, dayNumber: number): string | undefined {
+  if (dayNumber < 1) {
+    return undefined
+  }
+
+  if (itinerary.startDate) {
+    return addIsoDays(itinerary.startDate, dayNumber - 1)
+  }
+
+  const dayAtPosition = itinerary.days.find((day) => day.dayNumber === dayNumber)
+  if (dayAtPosition?.date) {
+    return dayAtPosition.date
+  }
+
+  const previousDay = itinerary.days.find((day) => day.dayNumber === dayNumber - 1)
+  if (previousDay?.date) {
+    return addIsoDays(previousDay.date, 1)
+  }
+
+  return undefined
+}
+
+function addIsoDays(isoDate: string, deltaDays: number): string {
+  const [year, month, day] = isoDate.split('-').map(Number)
+  const date = new Date(Date.UTC(year, month - 1, day))
+  date.setUTCDate(date.getUTCDate() + deltaDays)
+  return date.toISOString().slice(0, 10)
+}
+
+function normalizeOptionalIsoDate(value: string | null | undefined): string | null {
+  if (!value) {
+    return null
+  }
+
+  const trimmed = value.trim()
+  return trimmed.length > 0 ? trimmed : null
+}
+
+function deriveDayDateFromStartDate(startDate: string | null, dayNumber: number): string | undefined {
+  if (!startDate) {
+    return undefined
+  }
+
+  return addIsoDays(startDate, dayNumber - 1)
+}
+
+function collectAnchoredDateChangeConflicts(
+  days: ItineraryDay[],
+  currentStartDate: string | undefined,
+  nextStartDate: string | null,
+): AnchoredShiftConflict[] {
+  const normalizedCurrentStartDate = normalizeOptionalIsoDate(currentStartDate)
+  const normalizedNextStartDate = normalizeOptionalIsoDate(nextStartDate)
+  if (normalizedCurrentStartDate === normalizedNextStartDate) {
+    return []
+  }
+
+  return days.flatMap((day) => {
+    const currentDayDate = deriveDayDateFromStartDate(normalizedCurrentStartDate, day.dayNumber)
+    const newDayDate = deriveDayDateFromStartDate(normalizedNextStartDate, day.dayNumber)
+    if (currentDayDate === newDayDate) {
+      return []
+    }
+
+    return day.activities
+      .filter((activity) => typeof activity.anchorDate === 'string' && activity.anchorDate.length > 0)
+      .map((activity) => ({
+        dayNumber: day.dayNumber,
+        dayDate: day.date,
+        activityId: activity.id,
+        activityTitle: activity.title,
+        anchorDate: activity.anchorDate as string,
+      }))
+  })
+}
+
+function deriveStartDateFromEndDateInput(endDateValue: string, dayCount: number): string | null {
+  const normalizedEndDate = normalizeOptionalIsoDate(endDateValue)
+  if (!normalizedEndDate) {
+    return null
+  }
+
+  if (dayCount <= 1) {
+    return normalizedEndDate
+  }
+
+  return addIsoDays(normalizedEndDate, -(dayCount - 1))
+}
+
+function collectAnchoredShiftConflicts(days: ItineraryDay[], fromDayNumber: number): AnchoredShiftConflict[] {
+  return days
+    .filter((day) => day.dayNumber >= fromDayNumber)
+    .flatMap((day) => day.activities
+      .filter((activity) => typeof activity.anchorDate === 'string' && activity.anchorDate.length > 0)
+      .map((activity) => ({
+        dayNumber: day.dayNumber,
+        dayDate: day.date,
+        activityId: activity.id,
+        activityTitle: activity.title,
+        anchorDate: activity.anchorDate as string,
+      })))
+}
+
+function getPivotDateLabel(
+  days: ItineraryDay[],
+  dayNumber: number,
+  locale: string,
+  t: (key: string, options?: Record<string, unknown>) => string,
+): string {
+  const day = days.find((candidate) => candidate.dayNumber === dayNumber)
+  if (day?.date) {
+    return formatLocalDate(day.date, locale)
+  }
+
+  return t('common:itinerary.dayNumber', { dayNumber })
 }
 
 /* ---- Cover photo with edit overlay ---- */
@@ -749,8 +1148,27 @@ function CoverPhotoPlaceholder({ onSave }: { onSave: (url: string, caption: stri
 
   if (!editing) {
     return (
-      <button type="button" className="cover-add-placeholder" onClick={() => setEditing(true)}>
-        <PencilSimple size={14} /> {t('common:itinerary.edit.coverPhoto')}
+      <button
+        type="button"
+        className="cover-add-placeholder cover-add-placeholder--hero"
+        onClick={() => setEditing(true)}
+        aria-label={t('common:itinerary.edit.coverPhoto')}
+      >
+        <svg
+          className="cover-add-placeholder__icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          aria-hidden="true"
+        >
+          <path d="M3 18L9 12L13 16L17 12L21 16V20H3V18Z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M3 20V6C3 4.9 3.9 4 5 4H19C20.1 4 21 4.9 21 6V20" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+          <circle cx="8" cy="8" r="1.8" stroke="currentColor" strokeWidth="1.6" />
+        </svg>
+        <span className="cover-add-placeholder__label">{t('common:itinerary.edit.coverPhoto')}</span>
+        <span className="cover-add-placeholder__edit" aria-hidden="true">
+          <PencilSimple size={14} />
+        </span>
       </button>
     )
   }
@@ -772,4 +1190,3 @@ function CoverPhotoPlaceholder({ onSave }: { onSave: (url: string, caption: stri
     </div>
   )
 }
-

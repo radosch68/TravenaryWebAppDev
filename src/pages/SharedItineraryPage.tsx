@@ -38,7 +38,11 @@ export function SharedItineraryPage(): ReactElement {
   }, [shareToken])
 
   useEffect(() => {
-    void loadShared()
+    const handle = window.setTimeout(() => {
+      void loadShared()
+    }, 0)
+
+    return () => window.clearTimeout(handle)
   }, [loadShared])
 
   if (state === 'loading') {

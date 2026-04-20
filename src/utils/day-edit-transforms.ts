@@ -36,6 +36,13 @@ export function insertActivityInBlock(
   activity: ItineraryActivity,
   position?: number,
 ): PlanningSection[] {
+  if (sections.length === 0) {
+    return [{
+      blockIndex: 0,
+      activities: [activity],
+    }]
+  }
+
   return sections.map((section) => {
     const key = sectionKey(section)
     if (key !== blockKey) return section

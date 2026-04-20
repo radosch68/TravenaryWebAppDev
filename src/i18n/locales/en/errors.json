@@ -3,6 +3,6 @@
   "server": "Server error. Please try again.",
   "unknown": "Something went wrong.",
   "providerUnavailable": "Provider is unavailable right now. Use email sign-in.",
-  "dateConflict": "Some anchored activities fall outside the new date range. Adjust activities or choose a different start date.",
+  "dateConflict": "This date change conflicts with anchored activities. Update anchors first or choose different dates.",
   "dateConflictTitle": "Date conflict"
 }

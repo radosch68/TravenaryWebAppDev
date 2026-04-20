@@ -184,6 +184,19 @@ export interface UpdateItineraryRequest {
   days?: ItineraryDayInput[]
 }
 
+export interface InsertItineraryDayRequest {
+  dayNumber: number
+  summary?: string
+}
+
+export type DeleteItineraryDayMode = 'delete' | 'move'
+
+export interface DeleteItineraryDayRequest {
+  dayNumber: number
+  mode: DeleteItineraryDayMode
+  targetDayNumber?: number
+}
+
 export type LanguageMode = 'auto' | 'curated' | 'other'
 export type CuratedLanguageCode = 'en' | 'cs-CZ' | 'de' | 'fr' | 'es' | 'it' | 'pt-BR'
 export type TimingValue = 'thisWeekend' | 'nextWeek' | 'nextMonth' | 'summerHoliday' | 'winterHoliday' | 'customDates' | 'flexible' | 'other'

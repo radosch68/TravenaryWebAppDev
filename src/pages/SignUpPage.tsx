@@ -70,7 +70,9 @@ export function SignUpPage(): ReactElement {
 
   return (
     <main className="auth-shell">
-      <BrandLanguageHeader />
+      <header className="topbar">
+        <BrandLanguageHeader variant="topbar" />
+      </header>
       <section className="auth-card">
         <h1>{t('auth:signUp.title')}</h1>
         <p>{t('auth:signUp.subtitle')}</p>

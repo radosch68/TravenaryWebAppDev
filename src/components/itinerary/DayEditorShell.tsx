@@ -1,5 +1,6 @@
 import type { ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Plus } from '@phosphor-icons/react'
 
 import type { PlanningSection } from '@/utils/activity-classification'
 import { sectionKey } from '@/utils/day-edit-transforms'
@@ -25,6 +26,7 @@ export function DayEditorShell({
   children,
 }: DayEditorShellProps): ReactElement {
   const { t } = useTranslation(['common'])
+  const tailBlockKey = sections.length > 0 ? sectionKey(sections[sections.length - 1]) : 'flex-0'
 
   return (
     <div className="day-editor-shell">
@@ -50,6 +52,16 @@ export function DayEditorShell({
           })
         )}
       </div>
+
+      <button
+        type="button"
+        className="day-editor-shell__tail-add"
+        onClick={() => onActivityAdd(tailBlockKey)}
+        aria-label={t('common:itinerary.dayEditor.addActivity')}
+        title={t('common:itinerary.dayEditor.addActivity')}
+      >
+        <Plus size={19} weight="bold" />
+      </button>
 
       {children}
     </div>

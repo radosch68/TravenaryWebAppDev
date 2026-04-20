@@ -1,8 +1,9 @@
+import { Fragment } from 'react'
 import type { ReactElement } from 'react'
 import { useCallback, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { PencilSimple } from '@phosphor-icons/react'
+import { PencilSimple, Plus, X } from '@phosphor-icons/react'
 import {
   DndContext,
   closestCenter,
@@ -22,6 +23,8 @@ import { PlanningDaySection } from './PlanningDaySection'
 interface ItineraryPlanningViewProps {
   itinerary: ItineraryDetail
   onReorder: (days: ItineraryDay[]) => void
+  onInsertDay?: (dayNumber: number) => void
+  onDeleteDay?: (dayNumber: number) => void
   reorderError?: boolean
 }
 
@@ -30,7 +33,13 @@ interface PendingAnchoredMove {
   message: string
 }
 
-export function ItineraryPlanningView({ itinerary, onReorder, reorderError }: ItineraryPlanningViewProps): ReactElement {
+export function ItineraryPlanningView({
+  itinerary,
+  onReorder,
+  onInsertDay,
+  onDeleteDay,
+  reorderError,
+}: ItineraryPlanningViewProps): ReactElement {
   const { t, i18n } = useTranslation(['common'])
   const [pendingAnchoredMove, setPendingAnchoredMove] = useState<PendingAnchoredMove | null>(null)
 
@@ -168,7 +177,6 @@ export function ItineraryPlanningView({ itinerary, onReorder, reorderError }: It
   return (
     <>
       <div className="planning-view">
-        <p className="planning-view__hint">{t('common:itinerary.dayEditor.editDayHint')}</p>
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
@@ -176,14 +184,22 @@ export function ItineraryPlanningView({ itinerary, onReorder, reorderError }: It
         >
           <ul className="itinerary-day-list">
             {itinerary.days.map((day, index) => (
-              <DayRow
-                key={day.dayNumber}
-                day={day}
-                index={index}
-                itineraryId={itinerary.id}
-                totalDays={itinerary.days.length}
-              />
+              <Fragment key={`planning-day-${day.dayNumber}`}>
+                {onInsertDay ? (
+                  <DayInsertSlot dayNumber={day.dayNumber} onInsertDay={onInsertDay} />
+                ) : null}
+                <DayRow
+                  day={day}
+                  index={index}
+                  itineraryId={itinerary.id}
+                  totalDays={itinerary.days.length}
+                  onDeleteDay={onDeleteDay}
+                />
+              </Fragment>
             ))}
+            {onInsertDay ? (
+              <DayInsertSlot dayNumber={itinerary.days.length + 1} onInsertDay={onInsertDay} />
+            ) : null}
           </ul>
         </DndContext>
 
@@ -211,9 +227,10 @@ interface DayRowProps {
   index: number
   itineraryId: string
   totalDays: number
+  onDeleteDay?: (dayNumber: number) => void
 }
 
-function DayRow({ day, index, itineraryId, totalDays }: DayRowProps): ReactElement {
+function DayRow({ day, index, itineraryId, totalDays, onDeleteDay }: DayRowProps): ReactElement {
   const { t, i18n } = useTranslation(['common'])
   const navigate = useNavigate()
   const scrollStorageKey = `itinerary-detail-scroll:${itineraryId}`
@@ -258,7 +275,7 @@ function DayRow({ day, index, itineraryId, totalDays }: DayRowProps): ReactEleme
         <div className="itinerary-day-header__actions">
           <button
             type="button"
-            className="itinerary-day-header__edit-day-button"
+            className="itinerary-day-header__icon-button"
             onClick={(e) => {
               e.stopPropagation()
               navigateToDay()
@@ -268,6 +285,20 @@ function DayRow({ day, index, itineraryId, totalDays }: DayRowProps): ReactEleme
           >
             <PencilSimple size={16} weight="bold" />
           </button>
+          {onDeleteDay ? (
+            <button
+              type="button"
+              className="itinerary-day-header__icon-button"
+              onClick={(e) => {
+                e.stopPropagation()
+                onDeleteDay(day.dayNumber)
+              }}
+              aria-label={t('common:itinerary.days.deleteDay')}
+              title={t('common:itinerary.days.deleteDay')}
+            >
+              <X size={16} weight="bold" />
+            </button>
+          ) : null}
         </div>
       </div>
       {day.summary ? <p className="itinerary-day-summary">{day.summary}</p> : null}
@@ -277,6 +308,23 @@ function DayRow({ day, index, itineraryId, totalDays }: DayRowProps): ReactEleme
         dayIndex={index}
         totalDays={totalDays}
       />
+    </li>
+  )
+}
+
+function DayInsertSlot({ dayNumber, onInsertDay }: { dayNumber: number; onInsertDay: (dayNumber: number) => void }): ReactElement {
+  const { t } = useTranslation(['common'])
+  return (
+    <li className="itinerary-day-insert-slot">
+      <button
+        type="button"
+        className="itinerary-day-insert-button itinerary-day-header__icon-button"
+        onClick={() => onInsertDay(dayNumber)}
+        aria-label={t('common:itinerary.days.insertDayAt', { dayNumber })}
+        title={t('common:itinerary.days.insertDayAt', { dayNumber })}
+      >
+        <Plus size={16} weight="bold" />
+      </button>
     </li>
   )
 }

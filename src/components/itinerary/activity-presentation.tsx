@@ -4,7 +4,7 @@ import {
   Bus,
   HouseLine,
   Car,
-  Compass,
+  Footprints,
   ForkKnife,
   MapPin,
   Minus,
@@ -26,7 +26,7 @@ export const ACTIVITY_TYPE_ICON: Record<ActivityType, ReactElement> = {
   custom: <Star size={18} />,
   divider: <Minus size={18} />,
   shopping: <ShoppingBag size={18} />,
-  tour: <Compass size={18} />,
+  tour: <Footprints size={18} />,
 }
 
 export const ACTIVITY_TYPE_COLOR: Record<ActivityType, { bg: string; icon: string }> = {
