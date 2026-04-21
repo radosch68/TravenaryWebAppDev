@@ -35,6 +35,7 @@ export interface DraftItinerary {
   startDate: string
   endDate: string
   activities: string[]
+  activityBench?: DraftBlockActivity[]
   tags: string[]
   destinationKeywords?: string
   coverPhotoOptions?: CoverPhotoOption[]

@@ -729,6 +729,19 @@ export function ItineraryDetailPage(): ReactElement {
           </div>
         </div>
 
+        {itinerary.activityBench.length > 0 ? (
+          <details className="itinerary-detail-bench-summary">
+            <summary>
+              {t('common:itinerary.activityBench.summary', { count: itinerary.activityBench.length })}
+            </summary>
+            <ul>
+              {itinerary.activityBench.map((activity) => (
+                <li key={activity.id}>{activity.title}</li>
+              ))}
+            </ul>
+          </details>
+        ) : null}
+
         {dateConflictError && <p className="error">{t('errors:dateConflict')}</p>}
 
         {/* Day list — presentation-dependent rendering */}
@@ -811,7 +824,7 @@ export function ItineraryDetailPage(): ReactElement {
           errorMessage={deleteDayError}
           onModeChange={(mode) => {
             setDeleteDayMode(mode)
-            if (mode === 'delete') {
+            if (mode !== 'move') {
               setDeleteTargetDayNumber(undefined)
             } else {
               setDeleteTargetDayNumber((current) => current ?? defaultDeleteTargetDayNumber)

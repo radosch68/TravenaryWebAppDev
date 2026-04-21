@@ -84,6 +84,22 @@ export function insertActivityAsNewBlock(
   return inserted ? cleanupEmptyBlocks(nextSections) : sections
 }
 
+/** Insert an activity into a new standalone flexible block at a section index. */
+export function insertActivityAsStandaloneBlock(
+  sections: PlanningSection[],
+  activity: ItineraryActivity,
+  targetBlockIndex: number,
+): PlanningSection[] {
+  const clampedIndex = Math.max(0, Math.min(targetBlockIndex, sections.length))
+  const nextSections = [...sections]
+  nextSections.splice(clampedIndex, 0, {
+    blockIndex: -1,
+    dividerId: generateClientId(),
+    activities: [activity],
+  })
+  return cleanupEmptyBlocks(nextSections)
+}
+
 /** Delete an activity by ID from any section, with auto-cleanup of empty blocks */
 export function deleteActivity(
   sections: PlanningSection[],
@@ -142,6 +158,45 @@ export function moveActivityBetweenBlocks(
   return groupActivitiesForPlanning(
     flattenSectionsToActivities(cleanupEmptyBlocks(afterInsert)),
   ).sections
+}
+
+/** Move an existing activity into a new standalone block at a section index. */
+export function moveActivityToNewBlock(
+  sections: PlanningSection[],
+  activityId: string,
+  targetBlockIndex: number,
+): PlanningSection[] {
+  let movedActivity: ItineraryActivity | undefined
+  let sourceSectionIndex = -1
+  let sourceSectionWillBeEmptyAfterMove = false
+
+  const afterRemove = sections.map((section, sectionIndex) => {
+    const activityIndex = section.activities.findIndex((activity) => activity.id === activityId)
+    if (activityIndex === -1) {
+      return section
+    }
+
+    movedActivity = section.activities[activityIndex]
+    sourceSectionIndex = sectionIndex
+    sourceSectionWillBeEmptyAfterMove = section.activities.length === 1
+
+    return {
+      ...section,
+      activities: section.activities.filter((_, index) => index !== activityIndex),
+    }
+  })
+
+  if (!movedActivity) {
+    return sections
+  }
+
+  const compacted = cleanupEmptyBlocks(afterRemove)
+  let adjustedIndex = targetBlockIndex
+  if (sourceSectionWillBeEmptyAfterMove && sourceSectionIndex !== -1 && sourceSectionIndex < targetBlockIndex) {
+    adjustedIndex -= 1
+  }
+
+  return insertActivityAsStandaloneBlock(compacted, movedActivity, adjustedIndex)
 }
 
 /** Break a flexible block into individual activities (removes the divider grouping) */

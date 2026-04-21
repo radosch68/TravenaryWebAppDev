@@ -42,7 +42,7 @@ export function ActivityEditorRow({
 
   const { setNodeRef, transform, isDragging, listeners, attributes } = useDraggable({
     id: `activity-${activity.id}`,
-    data: { activityId: activity.id, sourceBlockKey: blockKey },
+    data: { activityId: activity.id, sourceBlockKey: blockKey, sourceSurface: 'day' as const },
     disabled: dragDisabled || disabled,
   })
 

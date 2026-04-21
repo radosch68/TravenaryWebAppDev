@@ -22,7 +22,7 @@ interface DayBlockEditorProps {
 function ActivityDropSlot({ blockKey, position }: { blockKey: string; position: number }): ReactElement {
   const { setNodeRef, isOver } = useDroppable({
     id: `act-slot-${blockKey}-${position}`,
-    data: { targetBlockKey: blockKey, targetPosition: position },
+    data: { targetSurface: 'day' as const, targetBlockKey: blockKey, targetPosition: position },
   })
   return (
     <div
@@ -208,5 +208,3 @@ export function DayBlockEditor({
     </div>
   )
 }
-
-

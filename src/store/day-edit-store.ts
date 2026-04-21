@@ -6,9 +6,11 @@ import {
   reorderActivityInBlock,
   insertActivityInBlock,
   insertActivityAsNewBlock,
+  insertActivityAsStandaloneBlock,
   deleteActivity,
   updateActivity,
   moveActivityBetweenBlocks,
+  moveActivityToNewBlock,
   breakBlock,
 } from '@/utils/day-edit-transforms'
 
@@ -24,10 +26,12 @@ interface DayEditState {
   reorderInBlock: (blockKey: string, oldIndex: number, newIndex: number) => void
   addActivity: (blockKey: string, activity: ItineraryActivity, position?: number) => void
   addActivityAsNewBlock: (blockKey: string, activity: ItineraryActivity, dividerLabel?: string) => void
+  addActivityAsStandaloneBlock: (activity: ItineraryActivity, targetBlockIndex: number) => void
   removeActivity: (activityId: string) => void
   editActivity: (updatedActivity: ItineraryActivity) => void
   editDividerLabel: (blockKey: string, newLabel: string) => void
   moveBetweenBlocks: (activityId: string, targetBlockKey: string, targetPosition: number) => void
+  moveToNewBlock: (activityId: string, targetBlockIndex: number) => void
   splitBlock: (blockKey: string) => void
 
   // Server sync
@@ -73,6 +77,12 @@ export const useDayEditStore = create<DayEditState>((set, get) => ({
     }))
   },
 
+  addActivityAsStandaloneBlock: (activity, targetBlockIndex) => {
+    set((state) => ({
+      sections: insertActivityAsStandaloneBlock(state.sections, activity, targetBlockIndex),
+    }))
+  },
+
   removeActivity: (activityId) => {
     set((state) => ({
       sections: deleteActivity(state.sections, activityId),
@@ -97,6 +107,12 @@ export const useDayEditStore = create<DayEditState>((set, get) => ({
   moveBetweenBlocks: (activityId, targetBlockKey, targetPosition) => {
     set((state) => ({
       sections: moveActivityBetweenBlocks(state.sections, activityId, targetBlockKey, targetPosition),
+    }))
+  },
+
+  moveToNewBlock: (activityId, targetBlockIndex) => {
+    set((state) => ({
+      sections: moveActivityToNewBlock(state.sections, activityId, targetBlockIndex),
     }))
   },
 

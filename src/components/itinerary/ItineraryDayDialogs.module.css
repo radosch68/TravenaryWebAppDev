@@ -50,6 +50,16 @@
   color: var(--text-muted);
 }
 
+.benchHint {
+  margin: 0;
+  padding: 0.45rem 0.55rem;
+  border-top: 2px dotted rgba(83, 68, 43, 0.3);
+  border-bottom: 2px dotted rgba(83, 68, 43, 0.3);
+  background: rgba(245, 238, 223, 0.78);
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
 .activities {
   display: grid;
   gap: 0.4rem;

@@ -65,6 +65,14 @@
       "shared": "Sdílený",
       "public": "Veřejný"
     },
+    "activityBench": {
+      "note_one": "Tento itinerář má {{count}} odloženou aktivitu. Naplánujte ji z detailu dne.",
+      "note_few": "Tento itinerář má {{count}} odložené aktivity. Naplánujte je z detailu dne.",
+      "note_other": "Tento itinerář má {{count}} odložených aktivit. Naplánujte je z detailu dne.",
+      "summary_one": "{{count}} odložená aktivita - dostupná v editoru dne.",
+      "summary_few": "{{count}} odložené aktivity - dostupné v editoru dne.",
+      "summary_other": "{{count}} odložených aktivit - dostupných v editoru dne."
+    },
     "edit": {
       "titlePlaceholder": "Název itineráře",
       "descriptionPlaceholder": "Popište svou cestu…",
@@ -101,6 +109,10 @@
       "deleteDialogTitleWithDate": "Smazat den {{date}}",
       "deleteDialogMessage": "Vyberte, co udělat s položkou {{dayLabel}}.",
       "deleteWithActivities": "Smazat den i jeho aktivity",
+      "benchActivities": "Přesunout aktivity do odložených aktivit",
+      "moveBenchHint_one": "{{count}} aktivita bude dostupná v editoru dne.",
+      "moveBenchHint_few": "{{count}} aktivity budou dostupné v editoru dne.",
+      "moveBenchHint_other": "{{count}} aktivit bude dostupných v editoru dne.",
       "moveActivities": "Přesunout aktivity do jiného dne",
       "moveTargetLabel": "Přesunout do dne",
       "selectTargetDay": "Vyberte den",
@@ -112,7 +124,8 @@
       "aaConflictDateChangeTitle": "Nelze změnit data itineráře",
       "aaConflictMessage": "Tato operace by ovlivnila datum ukotvených aktivit.",
       "deleteConfirmAction": "Smazat den",
-      "moveConfirmAction": "Přesunout a smazat den",
+      "benchConfirmAction": "Přesunout do odložených",
+      "moveConfirmAction": "Přesunout do dne",
       "mutationFailed": "Změnu dne se nepodařilo uložit. Zkuste to znovu.",
       "activityCount_one": "{{count}} aktivita",
       "activityCount_few": "{{count}} aktivity",
@@ -198,6 +211,19 @@
       "dayNotFound": "Tento den v itineráři již neexistuje.",
       "breakBlock": "Rozdělit na aktivity",
       "moveToBlock": "Přesunout do bloku",
+      "activityBench": {
+        "title": "Odložené aktivity",
+        "empty": "Žádné odložené aktivity",
+        "moveToBench": "Přesunout do odložených aktivit",
+        "moveToCurrentDay": "Přesunout do aktuálního dne",
+        "anchoredMoveBlocked": "Ukotvené aktivity nelze přesunout do odložených aktivit."
+      },
+      "deleteActionDialog": {
+        "title": "Smazat aktivitu",
+        "message": "Chcete aktivitu smazat, nebo ji přesunout do odložených aktivit?",
+        "bench": "Odložit",
+        "delete": "Smazat"
+      },
       "saveFailed": "Nepodařilo se uložit změny dne. Váš koncept je zachován.",
       "editDayHint": "Pro úpravu aktivit použijte Upravit den"
     },

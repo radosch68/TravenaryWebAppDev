@@ -97,7 +97,13 @@ export function DeleteDayDialog({
   const sourceDateLabel = day.date ? formatLocalDate(day.date, i18n.language) : dayLabel
   const titleDateLabel = day.date ? formatLocalDate(day.date, i18n.language) : dayLabel
   const moveDisabled = targetDays.length === 0 || movableActivities.length === 0
-  const confirmDisabled = busy || (mode === 'move' && targetDayNumber === undefined)
+  const benchDisabled = movableActivities.length === 0
+  const confirmDisabled = busy || (mode === 'move' && targetDayNumber === undefined) || (mode === 'bench' && benchDisabled)
+  const confirmLabel = mode === 'delete'
+    ? t('common:itinerary.days.deleteConfirmAction')
+    : mode === 'bench'
+      ? t('common:itinerary.days.benchConfirmAction')
+      : t('common:itinerary.days.moveConfirmAction')
 
   return (
     <DialogShell
@@ -113,11 +119,7 @@ export function DeleteDayDialog({
             onClick={onConfirm}
             disabled={confirmDisabled}
           >
-            {busy
-              ? t('common:pending')
-              : mode === 'delete'
-                ? t('common:itinerary.days.deleteConfirmAction')
-                : t('common:itinerary.days.moveConfirmAction')}
+            {busy ? t('common:pending') : confirmLabel}
           </button>
         </>
       )}
@@ -136,6 +138,24 @@ export function DeleteDayDialog({
               />
               <span>{t('common:itinerary.days.deleteWithActivities')}</span>
             </label>
+
+            <label className={styles.choice}>
+              <input
+                type="radio"
+                name="delete-day-mode"
+                value="bench"
+                checked={mode === 'bench'}
+                onChange={() => onModeChange('bench')}
+                disabled={busy || benchDisabled}
+              />
+              <span>{t('common:itinerary.days.benchActivities')}</span>
+            </label>
+
+            {mode === 'bench' ? (
+              <p className={styles.benchHint}>
+                {t('common:itinerary.days.moveBenchHint', { count: movableActivities.length })}
+              </p>
+            ) : null}
 
             <label className={styles.choice}>
               <input

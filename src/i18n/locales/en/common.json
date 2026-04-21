@@ -63,6 +63,12 @@
       "shared": "Shared",
       "public": "Public"
     },
+    "activityBench": {
+      "note_one": "This itinerary has {{count}} activity on Activity Bench. Schedule it from day editing.",
+      "note_other": "This itinerary has {{count}} activities on Activity Bench. Schedule them from day editing.",
+      "summary_one": "{{count}} benched activity - available in day editor.",
+      "summary_other": "{{count}} benched activities - available in day editor."
+    },
     "edit": {
       "titlePlaceholder": "Itinerary title",
       "descriptionPlaceholder": "Describe your trip…",
@@ -99,6 +105,9 @@
       "deleteDialogTitleWithDate": "Delete day {{date}}",
       "deleteDialogMessage": "Choose what to do with {{dayLabel}}.",
       "deleteWithActivities": "Delete day and its activities",
+      "benchActivities": "Move activities to Activity Bench",
+      "moveBenchHint_one": "{{count}} activity will be available in the day editor.",
+      "moveBenchHint_other": "{{count}} activities will be available in the day editor.",
       "moveActivities": "Move activities to another day",
       "moveTargetLabel": "Move to day",
       "selectTargetDay": "Select day",
@@ -110,7 +119,8 @@
       "aaConflictDateChangeTitle": "Cannot change itinerary dates",
       "aaConflictMessage": "This operation would affect date of anchored activities.",
       "deleteConfirmAction": "Delete day",
-      "moveConfirmAction": "Move and delete day",
+      "benchConfirmAction": "Move to Bench",
+      "moveConfirmAction": "Move to day",
       "mutationFailed": "Could not apply day change. Please retry.",
       "activityCount_one": "{{count}} activity",
       "activityCount_other": "{{count}} activities"
@@ -195,6 +205,19 @@
       "dayNotFound": "This day no longer exists for this itinerary.",
       "breakBlock": "Break into activities",
       "moveToBlock": "Move to block",
+      "activityBench": {
+        "title": "Activity Bench",
+        "empty": "No activities on Activity Bench",
+        "moveToBench": "Move to Activity Bench",
+        "moveToCurrentDay": "Move to current day",
+        "anchoredMoveBlocked": "Anchored activities cannot be moved to Activity Bench."
+      },
+      "deleteActionDialog": {
+        "title": "Delete activity",
+        "message": "Do you want to delete activity or move it on the Activity Bench",
+        "bench": "Bench",
+        "delete": "Delete"
+      },
       "saveFailed": "Could not save day changes. Your draft is preserved.",
       "editDayHint": "Use Edit day to update activities"
     },

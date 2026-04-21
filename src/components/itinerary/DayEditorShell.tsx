@@ -1,6 +1,7 @@
 import type { ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Plus } from '@phosphor-icons/react'
+import { useDroppable } from '@dnd-kit/core'
 
 import type { PlanningSection } from '@/utils/activity-classification'
 import { sectionKey } from '@/utils/day-edit-transforms'
@@ -32,24 +33,29 @@ export function DayEditorShell({
     <div className="day-editor-shell">
       <div className="day-editor-shell__blocks">
         {sections.length === 0 ? (
-          <p className="day-editor-shell__empty">{t('common:itinerary.days.noActivities')}</p>
+          <ActivityEmptyDropTarget label={t('common:itinerary.days.noActivities')} />
         ) : (
-          sections.map((section) => {
-            const key = sectionKey(section)
+          <>
+            {sections.map((section, sectionIndex) => {
+              const key = sectionKey(section)
 
-            return (
-              <DayBlockEditor
-                key={key}
-                blockKey={key}
-                section={section}
-                onActivityEdit={onActivityEdit}
-                onActivityDelete={onActivityDelete}
-                onActivityAdd={onActivityAdd}
-                onBreakBlock={onBreakBlock}
-                onDividerEdit={onDividerEdit}
-              />
-            )
-          })
+              return (
+                <div key={key} className="day-editor-shell__block-with-slot">
+                  <BlockInsertSlot targetBlockIndex={sectionIndex} />
+                  <DayBlockEditor
+                    blockKey={key}
+                    section={section}
+                    onActivityEdit={onActivityEdit}
+                    onActivityDelete={onActivityDelete}
+                    onActivityAdd={onActivityAdd}
+                    onBreakBlock={onBreakBlock}
+                    onDividerEdit={onDividerEdit}
+                  />
+                </div>
+              )
+            })}
+            <BlockInsertSlot targetBlockIndex={sections.length} />
+          </>
         )}
       </div>
 
@@ -65,5 +71,36 @@ export function DayEditorShell({
 
       {children}
     </div>
+  )
+}
+
+function ActivityEmptyDropTarget({ label }: { label: string }): ReactElement {
+  const { setNodeRef, isOver } = useDroppable({
+    id: 'act-slot-flex-0-0',
+    data: { targetSurface: 'day' as const, targetBlockKey: 'flex-0', targetPosition: 0 },
+  })
+
+  return (
+    <p
+      ref={setNodeRef}
+      className={`day-editor-shell__empty${isOver ? ' day-editor-shell__empty--drop-active' : ''}`}
+    >
+      {label}
+    </p>
+  )
+}
+
+function BlockInsertSlot({ targetBlockIndex }: { targetBlockIndex: number }): ReactElement {
+  const { setNodeRef, isOver } = useDroppable({
+    id: `act-new-block-slot-${targetBlockIndex}`,
+    data: { targetSurface: 'day' as const, targetNewBlockIndex: targetBlockIndex },
+  })
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`day-editor-shell__block-insert-slot${isOver ? ' day-editor-shell__block-insert-slot--active' : ''}`}
+      aria-hidden="true"
+    />
   )
 }

@@ -54,6 +54,7 @@ export function DraftReviewCarousel({
 
   const dateLabel = formatDateRange(draft.startDate, draft.endDate, i18n.language)
   const activityLabels = draft.activities
+  const benchActivities = draft.activityBench ?? []
   const preview = activityLabels.slice(0, 4)
   const hasDayPlan = draft.days != null && draft.days.length > 0
   const legacyCoverPhoto = (draft as DraftItinerary & { coverPhoto?: { url: string; caption?: string | null } | null }).coverPhoto
@@ -170,6 +171,26 @@ export function DraftReviewCarousel({
           </div>
         ) : null}
 
+        {benchActivities.length > 0 ? (
+          <div className="draft-carousel__bench">
+            <p className="draft-carousel__section-label">
+              {t('ai-generation:carousel.activityBench')}
+            </p>
+            <details className="draft-carousel__bench-details">
+              <summary>
+                {t('ai-generation:carousel.activityBenchToggle', { count: benchActivities.length })}
+              </summary>
+              <ul>
+                {benchActivities.map((activity, index) => (
+                  <li key={`bench-${index}`}>
+                    <ActivityItem activity={activity} />
+                  </li>
+                ))}
+              </ul>
+            </details>
+          </div>
+        ) : null}
+
         {draft.tags.length > 0 ? (
           <div className="draft-carousel__tags" aria-label={t('ai-generation:carousel.tags')}>
             {draft.tags.map((tag) => (
@@ -226,4 +247,3 @@ function ActivityItem({ activity }: { activity: DraftBlockActivity }): ReactElem
     </span>
   )
 }
-

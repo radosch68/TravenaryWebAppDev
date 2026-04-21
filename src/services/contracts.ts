@@ -144,6 +144,7 @@ export interface ItineraryDetail {
   schemaVer: number
   hasShareLink: boolean
   days: ItineraryDay[]
+  activityBench: ItineraryActivity[]
   createdAt: string
   updatedAt: string
 }
@@ -182,6 +183,7 @@ export interface UpdateItineraryRequest {
   coverPhoto?: WebReference | null
   startDate?: string | null
   days?: ItineraryDayInput[]
+  activityBench?: ItineraryActivityInput[]
 }
 
 export interface InsertItineraryDayRequest {
@@ -189,7 +191,7 @@ export interface InsertItineraryDayRequest {
   summary?: string
 }
 
-export type DeleteItineraryDayMode = 'delete' | 'move'
+export type DeleteItineraryDayMode = 'delete' | 'move' | 'bench'
 
 export interface DeleteItineraryDayRequest {
   dayNumber: number
