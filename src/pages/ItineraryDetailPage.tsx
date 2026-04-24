@@ -21,6 +21,7 @@ import type {
   ItineraryDetail,
 } from '@/services/contracts'
 import { formatLocalDate } from '@/utils/date-format'
+import { toDisplayLabel } from '@/utils/display-label'
 import { unsplashUrl } from '@/utils/unsplash-url'
 import { PencilSimple } from '@phosphor-icons/react'
 
@@ -483,7 +484,7 @@ export function ItineraryDetailPage(): ReactElement {
                     </svg>
                     <div className="itinerary-tags__list">
                       {itinerary.tags.map((tag) => (
-                        <span key={tag} className="itinerary-tag-chip">{tag}</span>
+                        <span key={tag} className="itinerary-tag-chip" title={tag}>{toDisplayLabel(tag)}</span>
                       ))}
                     </div>
                   </div>
@@ -751,12 +752,14 @@ export function ItineraryDetailPage(): ReactElement {
             onReorder={handlePlanningReorder}
             onInsertDay={handleOpenInsertDayDialog}
             onDeleteDay={handleOpenDeleteDayDialog}
+            referenceDisplayMode="thumbnails"
             reorderError={reorderError}
           />
         ) : (
           <ItineraryTimelineView
             itinerary={itinerary}
             onOpenDay={handleOpenDayDetail}
+            referenceDisplayMode="thumbnails"
           />
         )}
 

@@ -6,6 +6,7 @@ import { Star, Trash } from '@phosphor-icons/react'
 import type { ItineraryActivity } from '@/services/contracts'
 import { formatLocalTimeRange } from '@/utils/date-format'
 import { ACTIVITY_TYPE_COLOR, ACTIVITY_TYPE_ICON } from './activity-presentation'
+import { ActivityMetadataCompact } from './ActivityMetadataCompact'
 
 interface ActivityEditorRowProps {
   activity: ItineraryActivity
@@ -97,6 +98,10 @@ export function ActivityEditorRow({
         {activity.text ? (
           <span className="activity-editor-row__description">{activity.text}</span>
         ) : null}
+      </div>
+
+      <div className="activity-editor-row__meta" onClick={onEdit}>
+        <ActivityMetadataCompact activity={activity} referenceDisplayMode="thumbnails" />
       </div>
 
       <div className="activity-editor-row__right">

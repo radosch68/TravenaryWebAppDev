@@ -6,12 +6,17 @@ import type { ItineraryActivity } from '@/services/contracts'
 import { getEffectiveAnchored, sortActivitiesForTimeline } from '@/utils/activity-classification'
 import { formatLocalTimeRange } from '@/utils/date-format'
 import { ACTIVITY_TYPE_ICON, ACTIVITY_TYPE_COLOR } from './activity-presentation'
+import { ActivityMetadataCompact } from './ActivityMetadataCompact'
 
 interface TimelineDaySectionProps {
   activities: ItineraryActivity[]
+  referenceDisplayMode?: 'chips' | 'thumbnails'
 }
 
-export function TimelineDaySection({ activities }: TimelineDaySectionProps): ReactElement {
+export function TimelineDaySection({
+  activities,
+  referenceDisplayMode = 'chips',
+}: TimelineDaySectionProps): ReactElement {
   const { t } = useTranslation(['common'])
 
   if (activities.length === 0) {
@@ -26,14 +31,27 @@ export function TimelineDaySection({ activities }: TimelineDaySectionProps): Rea
     <div className="timeline-day-section">
       <ul className="planning-section__list">
         {sortActivitiesForTimeline(activities).map((activity) => (
-          <TimelineActivityRow key={activity.id} activity={activity} t={t} />
+          <TimelineActivityRow
+            key={activity.id}
+            activity={activity}
+            t={t}
+            referenceDisplayMode={referenceDisplayMode}
+          />
         ))}
       </ul>
     </div>
   )
 }
 
-function TimelineActivityRow({ activity, t }: { activity: ItineraryActivity; t: (key: string) => string }): ReactElement {
+function TimelineActivityRow({
+  activity,
+  t,
+  referenceDisplayMode = 'chips',
+}: {
+  activity: ItineraryActivity
+  t: (key: string) => string
+  referenceDisplayMode?: 'chips' | 'thumbnails'
+}): ReactElement {
   const { i18n } = useTranslation(['common'])
   const typeColor = ACTIVITY_TYPE_COLOR[activity.type] ?? ACTIVITY_TYPE_COLOR.note
 
@@ -55,6 +73,11 @@ function TimelineActivityRow({ activity, t }: { activity: ItineraryActivity; t: 
       {activity.text ? (
         <span className="timeline-activity__desc">{activity.text}</span>
       ) : null}
+      <ActivityMetadataCompact
+        activity={activity}
+        className="timeline-activity__meta"
+        referenceDisplayMode={referenceDisplayMode}
+      />
       {getEffectiveAnchored(activity) ? (
         <span className="timeline-activity__anchored-marker">
           {t('common:itinerary.presentation.anchoredMarker')}

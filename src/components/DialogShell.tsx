@@ -1,5 +1,5 @@
 import type { ReactElement, ReactNode } from 'react'
-import { useCallback, useEffect, useId } from 'react'
+import { useEffect, useId } from 'react'
 import { X } from '@phosphor-icons/react'
 import { useTranslation } from 'react-i18next'
 
@@ -15,7 +15,6 @@ interface DialogShellProps {
   className?: string
   ariaLabel?: string
   closeLabel?: string
-  closeOnOverlayClick?: boolean
 }
 
 export function DialogShell({
@@ -28,7 +27,6 @@ export function DialogShell({
   className,
   ariaLabel,
   closeLabel,
-  closeOnOverlayClick = true,
 }: DialogShellProps): ReactElement {
   const { t } = useTranslation(['common'])
   const titleId = useId()
@@ -41,13 +39,6 @@ export function DialogShell({
     return () => window.removeEventListener('keydown', handleEscape)
   }, [onClose])
 
-  const handleOverlayClick = useCallback(
-    (e: React.MouseEvent<HTMLDivElement>): void => {
-      if (closeOnOverlayClick && e.target === e.currentTarget) onClose()
-    },
-    [closeOnOverlayClick, onClose],
-  )
-
   return (
     <div
       className={styles.overlay}
@@ -55,7 +46,6 @@ export function DialogShell({
       aria-modal="true"
       aria-label={ariaLabel}
       aria-labelledby={ariaLabel ? undefined : titleId}
-      onClick={handleOverlayClick}
     >
       <div className={`${styles.modal}${className ? ` ${className}` : ''}`}>
         <div className={styles.header}>

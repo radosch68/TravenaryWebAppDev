@@ -9,15 +9,23 @@ import type { ItineraryActivity, ItineraryDay } from '@/services/contracts'
 import { groupActivitiesForPlanning, isActivityAnchored } from '@/utils/activity-classification'
 import { formatLocalTimeRange } from '@/utils/date-format'
 import { ACTIVITY_TYPE_ICON, ACTIVITY_TYPE_COLOR } from './activity-presentation'
+import { ActivityMetadataCompact } from './ActivityMetadataCompact'
 
 interface PlanningDaySectionProps {
   day: ItineraryDay
   disabled?: boolean
   totalDays: number
   dayIndex: number
+  referenceDisplayMode?: 'chips' | 'thumbnails'
 }
 
-export function PlanningDaySection({ day, disabled, totalDays, dayIndex }: PlanningDaySectionProps): ReactElement {
+export function PlanningDaySection({
+  day,
+  disabled,
+  totalDays,
+  dayIndex,
+  referenceDisplayMode = 'chips',
+}: PlanningDaySectionProps): ReactElement {
   const { t } = useTranslation(['common'])
   const { sections, blockCount } = groupActivitiesForPlanning(day.activities)
 
@@ -44,6 +52,7 @@ export function PlanningDaySection({ day, disabled, totalDays, dayIndex }: Plann
             dividerLabel={section.dividerLabel}
             activities={section.activities}
             disabled={disabled}
+            referenceDisplayMode={referenceDisplayMode}
           />
           <DropSlot dayNumber={day.dayNumber} position={sIdx + 1} />
         </Fragment>
@@ -75,9 +84,19 @@ interface FlexibleBlockProps {
   dividerLabel?: string
   activities: ItineraryActivity[]
   disabled?: boolean
+  referenceDisplayMode?: 'chips' | 'thumbnails'
 }
 
-function FlexibleBlock({ dayNumber, totalDays, blockIndex, blockCount, dividerLabel, activities, disabled }: FlexibleBlockProps): ReactElement {
+function FlexibleBlock({
+  dayNumber,
+  totalDays,
+  blockIndex,
+  blockCount,
+  dividerLabel,
+  activities,
+  disabled,
+  referenceDisplayMode = 'chips',
+}: FlexibleBlockProps): ReactElement {
   const { t } = useTranslation(['common'])
   const isSingleDay = totalDays <= 1
   const isSingleBlock = isSingleDay && blockCount <= 1
@@ -139,6 +158,7 @@ function FlexibleBlock({ dayNumber, totalDays, blockIndex, blockCount, dividerLa
             key={activity.id}
             activity={activity}
             disabled={disabled}
+            referenceDisplayMode={referenceDisplayMode}
           />
         ))}
       </ul>
@@ -151,9 +171,13 @@ function FlexibleBlock({ dayNumber, totalDays, blockIndex, blockCount, dividerLa
 interface PlanningActivityRowProps {
   activity: ItineraryActivity
   disabled?: boolean
+  referenceDisplayMode?: 'chips' | 'thumbnails'
 }
 
-function PlanningActivityRow({ activity }: PlanningActivityRowProps): ReactElement {
+function PlanningActivityRow({
+  activity,
+  referenceDisplayMode = 'chips',
+}: PlanningActivityRowProps): ReactElement {
   const { i18n } = useTranslation(['common'])
   const typeColor = ACTIVITY_TYPE_COLOR[activity.type] ?? ACTIVITY_TYPE_COLOR.note
   const anchored = isActivityAnchored(activity)
@@ -180,6 +204,11 @@ function PlanningActivityRow({ activity }: PlanningActivityRowProps): ReactEleme
       {activity.text ? (
         <span className="planning-activity__desc">{activity.text}</span>
       ) : null}
+      <ActivityMetadataCompact
+        activity={activity}
+        className="planning-activity__meta"
+        referenceDisplayMode={referenceDisplayMode}
+      />
     </li>
   )
 }

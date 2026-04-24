@@ -25,6 +25,7 @@ interface ItineraryPlanningViewProps {
   onReorder: (days: ItineraryDay[]) => void
   onInsertDay?: (dayNumber: number) => void
   onDeleteDay?: (dayNumber: number) => void
+  referenceDisplayMode?: 'chips' | 'thumbnails'
   reorderError?: boolean
 }
 
@@ -38,6 +39,7 @@ export function ItineraryPlanningView({
   onReorder,
   onInsertDay,
   onDeleteDay,
+  referenceDisplayMode = 'chips',
   reorderError,
 }: ItineraryPlanningViewProps): ReactElement {
   const { t, i18n } = useTranslation(['common'])
@@ -194,6 +196,7 @@ export function ItineraryPlanningView({
                   itineraryId={itinerary.id}
                   totalDays={itinerary.days.length}
                   onDeleteDay={onDeleteDay}
+                  referenceDisplayMode={referenceDisplayMode}
                 />
               </Fragment>
             ))}
@@ -228,9 +231,17 @@ interface DayRowProps {
   itineraryId: string
   totalDays: number
   onDeleteDay?: (dayNumber: number) => void
+  referenceDisplayMode: 'chips' | 'thumbnails'
 }
 
-function DayRow({ day, index, itineraryId, totalDays, onDeleteDay }: DayRowProps): ReactElement {
+function DayRow({
+  day,
+  index,
+  itineraryId,
+  totalDays,
+  onDeleteDay,
+  referenceDisplayMode,
+}: DayRowProps): ReactElement {
   const { t, i18n } = useTranslation(['common'])
   const navigate = useNavigate()
   const scrollStorageKey = `itinerary-detail-scroll:${itineraryId}`
@@ -307,6 +318,7 @@ function DayRow({ day, index, itineraryId, totalDays, onDeleteDay }: DayRowProps
         day={day}
         dayIndex={index}
         totalDays={totalDays}
+        referenceDisplayMode={referenceDisplayMode}
       />
     </li>
   )

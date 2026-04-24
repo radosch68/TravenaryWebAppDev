@@ -34,7 +34,6 @@ export function InsertDayDialog({
       title={t('common:itinerary.days.insertDialogTitle')}
       onClose={onCancel}
       className={styles.modal}
-      closeOnOverlayClick={!busy}
       footer={<button type="button" className="button-primary" onClick={onConfirm} disabled={busy}>{busy ? t('common:pending') : t('common:itinerary.days.insertConfirm')}</button>}
     >
       <div className={styles.body}>
@@ -110,7 +109,6 @@ export function DeleteDayDialog({
       title={t('common:itinerary.days.deleteDialogTitleWithDate', { date: titleDateLabel })}
       onClose={onCancel}
       className={styles.modal}
-      closeOnOverlayClick={!busy}
       footer={(
         <>
           <button
@@ -241,7 +239,6 @@ export function AnchoredShiftConflictDialog({
       title={title}
       onClose={onClose}
       className={styles.modal}
-      closeOnOverlayClick
     >
       <div className={styles.body}>
         <p className={styles.message}>{message}</p>

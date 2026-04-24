@@ -12,6 +12,7 @@ interface ItineraryTimelineViewProps {
   onOpenDay?: (dayNumber: number) => void
   onInsertDay?: (dayNumber: number) => void
   onDeleteDay?: (dayNumber: number) => void
+  referenceDisplayMode?: 'chips' | 'thumbnails'
 }
 
 export function ItineraryTimelineView({
@@ -19,6 +20,7 @@ export function ItineraryTimelineView({
   onOpenDay,
   onInsertDay,
   onDeleteDay,
+  referenceDisplayMode = 'chips',
 }: ItineraryTimelineViewProps): ReactElement {
   const { t, i18n } = useTranslation(['common'])
 
@@ -98,7 +100,10 @@ export function ItineraryTimelineView({
             </div>
             {day.summary ? <p>{day.summary}</p> : null}
 
-            <TimelineDaySection activities={day.activities} />
+            <TimelineDaySection
+              activities={day.activities}
+              referenceDisplayMode={referenceDisplayMode}
+            />
           </li>
         </Fragment>
       ))}

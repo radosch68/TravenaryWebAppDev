@@ -27,6 +27,12 @@ export interface DraftDay {
 export interface CoverPhotoOption {
   url: string
   caption?: string | null
+  source?: 'unsplash'
+  authorName?: string
+  authorUrl?: string
+  sourceUrl?: string
+  downloadLocation?: string
+  thumbnailUrl?: string
 }
 
 export interface DraftItinerary {

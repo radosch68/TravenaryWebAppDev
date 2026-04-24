@@ -969,7 +969,6 @@ export function GenerationModal({ onClose, onFallback }: GenerationModalProps): 
     <DialogShell
       title={t('ai-generation:modal.title')}
       onClose={handleCancel}
-      closeOnOverlayClick={false}
       footer={reviewFooter ?? footerContent}
       headerExtra={paginationBar}
     >

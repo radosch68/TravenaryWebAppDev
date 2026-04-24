@@ -1,5 +1,6 @@
 import { apiRequest } from '@/services/api-client'
 import type {
+  PhotoSearchResult,
   DeleteItineraryDayRequest,
   InsertItineraryDayRequest,
   ItineraryDayInput,
@@ -142,4 +143,17 @@ export async function getSharedItinerary(
     method: 'GET',
     protected: false,
   })
+}
+
+export async function searchPhotos(
+  keywords: string,
+  limit = 3,
+): Promise<PhotoSearchResult[]> {
+  const response = await apiRequest<{ items: PhotoSearchResult[] }>('/itineraries/photos/search', {
+    method: 'POST',
+    body: { keywords, limit },
+    protected: true,
+  })
+
+  return response.items ?? []
 }

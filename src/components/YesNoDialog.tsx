@@ -11,7 +11,6 @@ interface YesNoDialogProps {
   confirmLabel: string
   cancelLabel: string
   confirmVariant?: 'primary' | 'danger'
-  closeOnOverlayClick?: boolean
 }
 
 export function YesNoDialog({
@@ -22,13 +21,11 @@ export function YesNoDialog({
   confirmLabel,
   cancelLabel,
   confirmVariant = 'primary',
-  closeOnOverlayClick = true,
 }: YesNoDialogProps): ReactElement {
   return (
     <DialogShell
       title={title}
       onClose={onCancel}
-      closeOnOverlayClick={closeOnOverlayClick}
       className={styles.modal}
       footer={(
         <>

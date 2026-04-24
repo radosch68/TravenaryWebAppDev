@@ -3,6 +3,11 @@
   max-height: min(90vh, 600px);
 }
 
+.nestedModal {
+  width: min(100%, 560px);
+  max-height: min(90vh, 720px);
+}
+
 .typeBadge {
   display: inline-flex;
   align-items: center;
@@ -27,5 +32,10 @@
     width: min(100%, 25rem);
     max-height: calc(100dvh - 1.5rem);
     border-radius: 14px;
+  }
+
+  .nestedModal {
+    width: min(100%, 28rem);
+    max-height: calc(100dvh - 1.5rem);
   }
 }
