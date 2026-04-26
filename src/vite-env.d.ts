@@ -3,6 +3,7 @@
 interface ImportMetaEnv {
   readonly VITE_API_BASE_URL: string
   readonly VITE_BASE_PATH?: string
+  readonly VITE_ENV_LABEL?: string
   readonly VITE_ENABLE_SOCIAL_AUTH?: 'true' | 'false'
   readonly VITE_GOOGLE_OAUTH_CLIENT_ID?: string
   readonly VITE_APPLE_OAUTH_CLIENT_ID?: string

@@ -486,6 +486,27 @@ button:disabled {
   z-index: 30;
 }
 
+.brand-language-header--topbar .brand-language-header__env-badge {
+  position: absolute;
+  top: 0.2rem;
+  right: calc(var(--control-circle-size) + var(--space-3));
+  z-index: 29;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-inline-size: 2.35rem;
+  block-size: 1.55rem;
+  padding: 0 0.55rem;
+  border: 1px solid rgba(190, 96, 14, 0.46);
+  border-radius: 999px;
+  background: rgba(255, 237, 216, 0.9);
+  color: #7f3a00;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1;
+}
+
 .brand-language-header--topbar .language-selector__trigger {
   box-shadow: 0 0 0 var(--topbar-button-halo-size) var(--topbar-button-halo-color), 0 6px 14px rgba(0, 0, 0, 0.08);
 }

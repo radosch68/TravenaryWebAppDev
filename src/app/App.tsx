@@ -17,6 +17,15 @@ import { SignInPage } from '../pages/SignInPage'
 import { SignUpPage } from '../pages/SignUpPage'
 import { useAuthStore } from '../store/auth-store'
 
+function normalizeEnvironmentLabel(rawValue: string | undefined): string | null {
+  const value = rawValue?.trim()
+  if (!value) {
+    return null
+  }
+
+  return value.toUpperCase()
+}
+
 function HomeRoute(): ReactElement {
   const [searchParams] = useSearchParams()
   const mapItineraryId = searchParams.get('mapItineraryId')?.trim()
@@ -33,6 +42,7 @@ export default function App(): ReactElement {
   const restoreSessionFromStorage = useAuthStore(
     (state) => state.restoreSessionFromStorage,
   )
+  const environmentLabel = normalizeEnvironmentLabel(import.meta.env.VITE_ENV_LABEL)
 
   useEffect(() => {
     void restoreSessionFromStorage()
@@ -69,6 +79,17 @@ export default function App(): ReactElement {
     root?.removeAttribute('data-preview-width')
     root?.style.removeProperty('--desktop-preview-width')
   }, [])
+
+  useEffect(() => {
+    if (!environmentLabel) {
+      return
+    }
+
+    const titlePrefix = `[${environmentLabel}] `
+    if (!document.title.startsWith(titlePrefix)) {
+      document.title = `${titlePrefix}${document.title}`
+    }
+  }, [environmentLabel])
 
   return (
     <BrowserRouter basename={import.meta.env.BASE_URL}>
