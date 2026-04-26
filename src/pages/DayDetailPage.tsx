@@ -21,13 +21,15 @@ import { ActivityBenchPanel } from '@/components/itinerary/ActivityBenchPanel'
 import { ActivityFormPanel } from '@/components/itinerary/ActivityFormPanel'
 import type { ActivityFormSavePayload } from '@/components/itinerary/ActivityFormPanel'
 import { ActivityTypePicker } from '@/components/itinerary/ActivityTypePicker'
+import { buildLocationMapPinsFromActivities } from '@/components/itinerary/location-map-pins'
+import type { LocationMapPin } from '@/components/itinerary/location-map-pins'
 import { ApiError } from '@/services/contracts'
 import { getItinerary, updateItinerary } from '@/services/itinerary-service'
 import type { ItineraryDetail, ItineraryActivity, ItineraryActivityInput, ItineraryDay, UpdateItineraryRequest, ActivityType } from '@/services/contracts'
 import { formatLocalDate, formatWeekday } from '@/utils/date-format'
 import { isActivityAnchored } from '@/utils/activity-classification'
 import { sectionKey } from '@/utils/day-edit-transforms'
-import { PencilSimple } from '@phosphor-icons/react'
+import { ArrowSquareOut, MapTrifold, PencilSimple } from '@phosphor-icons/react'
 import { useDayEditStore } from '@/store/day-edit-store'
 
 export function DayDetailPage(): ReactElement {
@@ -160,8 +162,14 @@ export function DayDetailPage(): ReactElement {
       if (updatedDay) {
         applyServerState(updatedDay)
       }
-    } catch {
+    } catch (error) {
       if (requestId !== latestSaveRequestIdRef.current) {
+        return
+      }
+
+      if (error instanceof ApiError) {
+        const firstDetail = error.details?.[0]?.message
+        setSaveError(firstDetail ?? error.message ?? t('common:itinerary.dayEditor.saveFailed'))
         return
       }
 
@@ -405,6 +413,26 @@ export function DayDetailPage(): ReactElement {
     navigate(to)
   }, [navigate])
 
+  const dayMapPins = useMemo<LocationMapPin[]>(() => {
+    const activities = sections.flatMap((section) => section.activities)
+    return buildLocationMapPinsFromActivities(activities, {
+      getActivityTypeLabel: (activityType) => t(`common:itinerary.dayEditor.activityTypeOptions.${activityType}`),
+    })
+  }, [sections, t])
+
+  const dayMapRouteLabel = useMemo(() => {
+    if (dayMapPins.length === 0) {
+      return ''
+    }
+
+    const firstPin = dayMapPins[0]
+    const lastPin = dayMapPins[dayMapPins.length - 1]
+    const firstLabel = firstPin.locationLabel?.trim() || firstPin.activityTitle
+    const lastLabel = lastPin.locationLabel?.trim() || lastPin.activityTitle
+
+    return firstLabel === lastLabel ? firstLabel : `${firstLabel} → ${lastLabel}`
+  }, [dayMapPins])
+
   // Find the activity being edited
   const editingActivity = useMemo<ItineraryActivity | undefined>(() => {
     if (!editingActivityId) return undefined
@@ -551,6 +579,44 @@ export function DayDetailPage(): ReactElement {
               </div>
             )}
           />
+
+          <section className="itinerary-detail-panel__map-section" aria-label={t('common:itinerary.dayEditor.dailyMapTitle')}>
+            {dayMapPins.length > 0 ? (
+              <Link
+                className="itinerary-detail-panel__map-launcher"
+                to={`/?mapItineraryId=${encodeURIComponent(itinerary.id)}&mapDayNumber=${encodeURIComponent(String(day.dayNumber))}`}
+                target="_blank"
+                rel="noreferrer"
+                aria-label={t('common:itinerary.dayEditor.openFullMap')}
+                title={t('common:itinerary.dayEditor.openFullMap')}
+              >
+                <div className="itinerary-detail-panel__map-launcher-copy">
+                  <MapTrifold size={40} weight="regular" aria-hidden="true" />
+                  <div>
+                    <h2 className="itinerary-detail-panel__map-title">{t('common:itinerary.dayEditor.dailyMapTitle')}</h2>
+                    <p className="itinerary-detail-panel__map-count">
+                      {dayMapRouteLabel}
+                    </p>
+                  </div>
+                </div>
+                <span className="itinerary-detail-panel__map-open" aria-hidden="true">
+                  <ArrowSquareOut size={20} weight="bold" aria-hidden="true" />
+                </span>
+              </Link>
+            ) : (
+              <div className="itinerary-detail-panel__map-launcher itinerary-detail-panel__map-launcher--disabled">
+                <div className="itinerary-detail-panel__map-launcher-copy">
+                  <MapTrifold size={40} weight="regular" aria-hidden="true" />
+                  <div>
+                    <h2 className="itinerary-detail-panel__map-title">{t('common:itinerary.dayEditor.dailyMapTitle')}</h2>
+                    <p className="itinerary-detail-panel__map-count itinerary-detail-panel__map-count--empty">
+                      {t('common:itinerary.dayEditor.mapNoMarkedLocations')}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </section>
 
           <DayEditorShell
             sections={sections}

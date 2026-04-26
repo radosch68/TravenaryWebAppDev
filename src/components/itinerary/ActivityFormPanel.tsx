@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { AnchorSimple, ArrowRight, ArrowSquareOut, CaretDoubleUp, CaretDown, CaretRight, MagnifyingGlass, Plus, Trash } from '@phosphor-icons/react'
 
 import { DialogShell } from '@/components/DialogShell'
-import type { PhotoSearchResult, ActivityType, AccommodationPlatform, ItineraryActivity, WebReference } from '@/services/contracts'
+import type { PhotoSearchResult, ActivityType, AccommodationPlatform, ActivityLocation, ItineraryActivity, WebReference } from '@/services/contracts'
 import { searchPhotos } from '@/services/itinerary-service'
 import { generateClientId } from '@/utils/client-id'
 import { formatLocalDate, formatLocalTime, getLocalizedTimeInputPlaceholder } from '@/utils/date-format'
@@ -38,11 +38,7 @@ const MAX_LOCATION_ROWS = 10
 
 type ReferenceType = NonNullable<WebReference['type']>
 
-interface LocationReference {
-  caption?: string
-  coordinates?: number[]
-  address?: string
-}
+type LocationReference = ActivityLocation
 
 interface ReferenceDraftRow {
   id: string
@@ -60,8 +56,13 @@ interface LocationDraftRow {
   id: string
   caption: string
   address: string
+  showOnMap: boolean
   longitude: string
   latitude: string
+  initialAddress: string
+  initialLongitude: string
+  initialLatitude: string
+  coordinatesManualOverride: boolean
 }
 
 type ReferenceAddDialogMode = 'manual' | 'photo'
@@ -156,8 +157,13 @@ function toLocationDraftRows(locations?: LocationReference[]): LocationDraftRow[
     id: generateClientId(),
     caption: location.caption ?? '',
     address: location.address ?? '',
+    showOnMap: location.showOnMap === true,
     longitude: typeof location.coordinates?.[0] === 'number' ? String(location.coordinates[0]) : '',
     latitude: typeof location.coordinates?.[1] === 'number' ? String(location.coordinates[1]) : '',
+    initialAddress: location.address ?? '',
+    initialLongitude: typeof location.coordinates?.[0] === 'number' ? String(location.coordinates[0]) : '',
+    initialLatitude: typeof location.coordinates?.[1] === 'number' ? String(location.coordinates[1]) : '',
+    coordinatesManualOverride: false,
   }))
 }
 
@@ -175,8 +181,13 @@ function createEmptyLocationRow(): LocationDraftRow {
     id: generateClientId(),
     caption: '',
     address: '',
+    showOnMap: false,
     longitude: '',
     latitude: '',
+    initialAddress: '',
+    initialLongitude: '',
+    initialLatitude: '',
+    coordinatesManualOverride: false,
   }
 }
 
@@ -317,7 +328,10 @@ export function ActivityFormPanel({
     })
   }
 
-  const updateLocationRow = (rowId: string, patch: Partial<Omit<LocationDraftRow, 'id'>>): void => {
+  const updateLocationRow = (
+    rowId: string,
+    patch: Partial<Pick<LocationDraftRow, 'caption' | 'address' | 'showOnMap' | 'longitude' | 'latitude' | 'coordinatesManualOverride'>>,
+  ): void => {
     setLocationRows((prev) => prev.map((row) => (row.id === rowId ? { ...row, ...patch } : row)))
     setLocationErrors((prev) => {
       if (!(rowId in prev)) {
@@ -327,6 +341,13 @@ export function ActivityFormPanel({
       const next = { ...prev }
       delete next[rowId]
       return next
+    })
+  }
+
+  const updateLocationCoordinates = (rowId: string, field: 'longitude' | 'latitude', value: string): void => {
+    updateLocationRow(rowId, {
+      [field]: value,
+      coordinatesManualOverride: true,
     })
   }
 
@@ -428,7 +449,20 @@ export function ActivityFormPanel({
       return
     }
 
-    setLocationRows((prev) => [...prev, { ...locationAddRow, caption, address, longitude: longitudeRaw, latitude: latitudeRaw }])
+    setLocationRows((prev) => [
+      ...prev,
+      {
+        ...locationAddRow,
+        caption,
+        address,
+        longitude: longitudeRaw,
+        latitude: latitudeRaw,
+        initialAddress: address,
+        initialLongitude: longitudeRaw,
+        initialLatitude: latitudeRaw,
+        coordinatesManualOverride: hasLongitude && hasLatitude,
+      },
+    ])
     setLocationRowOpen((prev) => ({ ...prev, [locationAddRow.id]: false }))
     closeLocationAddDialog()
   }
@@ -666,6 +700,7 @@ export function ActivityFormPanel({
     for (const row of locationRows) {
       const caption = row.caption.trim()
       const address = row.address.trim()
+      const showOnMap = row.showOnMap === true
       const longitudeRaw = row.longitude.trim()
       const latitudeRaw = row.latitude.trim()
       const hasLongitude = longitudeRaw.length > 0
@@ -707,8 +742,21 @@ export function ActivityFormPanel({
         continue
       }
 
+      if (
+        showOnMap
+        && hasAddress
+        && coordinates
+        && !row.coordinatesManualOverride
+        && address !== row.initialAddress.trim()
+        && longitudeRaw === row.initialLongitude.trim()
+        && latitudeRaw === row.initialLatitude.trim()
+      ) {
+        coordinates = undefined
+      }
+
       normalizedLocations.push({
         ...(caption ? { caption } : {}),
+        showOnMap,
         ...(hasAddress ? { address } : {}),
         ...(coordinates ? { coordinates } : {}),
       })
@@ -1381,7 +1429,7 @@ export function ActivityFormPanel({
                             id={`activity-location-longitude-${row.id}`}
                             type="text"
                             value={row.longitude}
-                            onChange={(e) => updateLocationRow(row.id, { longitude: e.target.value })}
+                            onChange={(e) => updateLocationCoordinates(row.id, 'longitude', e.target.value)}
                             disabled={disabled}
                           />
                         </div>
@@ -1391,7 +1439,7 @@ export function ActivityFormPanel({
                             id={`activity-location-latitude-${row.id}`}
                             type="text"
                             value={row.latitude}
-                            onChange={(e) => updateLocationRow(row.id, { latitude: e.target.value })}
+                            onChange={(e) => updateLocationCoordinates(row.id, 'latitude', e.target.value)}
                             disabled={disabled}
                           />
                         </div>
@@ -1420,6 +1468,21 @@ export function ActivityFormPanel({
                           onChange={(e) => updateLocationRow(row.id, { address: e.target.value })}
                           disabled={disabled}
                         />
+                      </div>
+                      <div className="activity-form-panel__block-option">
+                        <label className="activity-form-panel__checkbox" htmlFor={`activity-location-show-on-map-${row.id}`}>
+                          <input
+                            id={`activity-location-show-on-map-${row.id}`}
+                            type="checkbox"
+                            checked={row.showOnMap}
+                            onChange={(event) => updateLocationRow(row.id, { showOnMap: event.target.checked })}
+                            disabled={disabled}
+                          />
+                          <span className="activity-form-panel__checkbox-indicator" aria-hidden="true">
+                            <span className="activity-form-panel__checkbox-indicator-mark">✓</span>
+                          </span>
+                          <span>{t('common:itinerary.dayEditor.fieldShowOnMap')}</span>
+                        </label>
                       </div>
                     </div>
                   ) : null}
@@ -1648,7 +1711,7 @@ export function ActivityFormPanel({
                 type="text"
                 value={locationAddRow.longitude}
                 onChange={(e) => {
-                  setLocationAddRow((prev) => ({ ...prev, longitude: e.target.value }))
+                  setLocationAddRow((prev) => ({ ...prev, longitude: e.target.value, coordinatesManualOverride: true }))
                   setLocationAddError(null)
                 }}
                 disabled={disabled}
@@ -1661,7 +1724,7 @@ export function ActivityFormPanel({
                 type="text"
                 value={locationAddRow.latitude}
                 onChange={(e) => {
-                  setLocationAddRow((prev) => ({ ...prev, latitude: e.target.value }))
+                  setLocationAddRow((prev) => ({ ...prev, latitude: e.target.value, coordinatesManualOverride: true }))
                   setLocationAddError(null)
                 }}
                 disabled={disabled}
@@ -1694,6 +1757,24 @@ export function ActivityFormPanel({
               }}
               disabled={disabled}
             />
+          </div>
+          <div className="activity-form-panel__block-option">
+            <label className="activity-form-panel__checkbox" htmlFor={`activity-location-show-on-map-add-${locationAddRow.id}`}>
+              <input
+                id={`activity-location-show-on-map-add-${locationAddRow.id}`}
+                type="checkbox"
+                checked={locationAddRow.showOnMap}
+                onChange={(event) => {
+                  setLocationAddRow((prev) => ({ ...prev, showOnMap: event.target.checked }))
+                  setLocationAddError(null)
+                }}
+                disabled={disabled}
+              />
+              <span className="activity-form-panel__checkbox-indicator" aria-hidden="true">
+                <span className="activity-form-panel__checkbox-indicator-mark">✓</span>
+              </span>
+              <span>{t('common:itinerary.dayEditor.fieldShowOnMap')}</span>
+            </label>
           </div>
           {locationAddError ? <p className="activity-form-panel__field-error" role="alert">{locationAddError}</p> : null}
         </div>

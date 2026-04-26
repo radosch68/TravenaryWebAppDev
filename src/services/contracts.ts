@@ -97,6 +97,13 @@ export interface ActivityDetails {
   bookingRef?: string
 }
 
+export interface ActivityLocation {
+  caption?: string
+  showOnMap?: boolean
+  coordinates?: number[]
+  address?: string
+}
+
 export interface ItineraryActivity {
   id: string
   type: ActivityType
@@ -107,7 +114,7 @@ export interface ItineraryActivity {
   anchorDate?: string | null
   details?: ActivityDetails
   references?: WebReference[]
-  locations?: Array<{ caption?: string; coordinates?: number[]; address?: string }>
+  locations?: ActivityLocation[]
 }
 
 export type ItineraryActivityInput = ItineraryActivity

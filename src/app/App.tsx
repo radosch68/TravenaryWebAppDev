@@ -1,11 +1,12 @@
 import type { ReactElement } from 'react'
 import { useEffect } from 'react'
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes, useSearchParams } from 'react-router-dom'
 
 import { CollisionGuardRoute } from './guards/CollisionGuardRoute'
 import { ProtectedRoute } from './guards/ProtectedRoute'
 import { PublicOnlyRoute } from './guards/PublicOnlyRoute'
 import { ItineraryDetailPage } from '@/pages/ItineraryDetailPage'
+import { ItineraryMapPage } from '@/pages/ItineraryMapPage'
 import { DayDetailPage } from '@/pages/DayDetailPage'
 import { SharedItineraryPage } from '@/pages/SharedItineraryPage'
 import { HomePage } from '../pages/HomePage'
@@ -15,6 +16,18 @@ import { ProfilePage } from '../pages/ProfilePage'
 import { SignInPage } from '../pages/SignInPage'
 import { SignUpPage } from '../pages/SignUpPage'
 import { useAuthStore } from '../store/auth-store'
+
+function HomeRoute(): ReactElement {
+  const [searchParams] = useSearchParams()
+  const mapItineraryId = searchParams.get('mapItineraryId')?.trim()
+  const mapDayNumber = searchParams.get('mapDayNumber')?.trim()
+
+  if (mapItineraryId) {
+    return <ItineraryMapPage itineraryIdOverride={mapItineraryId} dayNumberOverride={mapDayNumber} />
+  }
+
+  return <HomePage />
+}
 
 export default function App(): ReactElement {
   const restoreSessionFromStorage = useAuthStore(
@@ -92,7 +105,7 @@ export default function App(): ReactElement {
           path="/"
           element={
             <ProtectedRoute>
-              <HomePage />
+              <HomeRoute />
             </ProtectedRoute>
           }
         />
@@ -101,6 +114,14 @@ export default function App(): ReactElement {
           element={
             <ProtectedRoute>
               <ItineraryDetailPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/itineraries/:itineraryId/map"
+          element={
+            <ProtectedRoute>
+              <ItineraryMapPage />
             </ProtectedRoute>
           }
         />

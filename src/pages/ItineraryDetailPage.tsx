@@ -1,5 +1,5 @@
 import type { ReactElement } from 'react'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 
@@ -10,6 +10,7 @@ import { ShareButton } from '@/components/ShareButton'
 import { ItineraryPlanningView } from '@/components/itinerary/ItineraryPlanningView'
 import { ItineraryTimelineView } from '@/components/itinerary/ItineraryTimelineView'
 import { AnchoredShiftConflictDialog, DeleteDayDialog, InsertDayDialog } from '@/components/itinerary/ItineraryDayDialogs'
+import { buildLocationMapPinsFromDays } from '@/components/itinerary/location-map-pins'
 import { ApiError } from '@/services/contracts'
 import { deleteItinerary, deleteItineraryDay, getItinerary, insertItineraryDay, updateItinerary } from '@/services/itinerary-service'
 import type {
@@ -23,7 +24,7 @@ import type {
 import { formatLocalDate } from '@/utils/date-format'
 import { toDisplayLabel } from '@/utils/display-label'
 import { unsplashUrl } from '@/utils/unsplash-url'
-import { PencilSimple } from '@phosphor-icons/react'
+import { ArrowSquareOut, MapTrifold, PencilSimple } from '@phosphor-icons/react'
 
 type PresentationMode = 'planning' | 'timeline'
 const PRESENTATION_MODE_STORAGE_KEY = 'itinerary-detail-presentation-mode'
@@ -388,6 +389,29 @@ export function ItineraryDetailPage(): ReactElement {
     }
   }, [deleteDayMode, deleteDayNumber, deleteTargetDayNumber, itineraryId, t])
 
+  const itineraryMapPins = useMemo(() => {
+    if (!itinerary) {
+      return []
+    }
+
+    return buildLocationMapPinsFromDays(itinerary.days, {
+      getActivityTypeLabel: (activityType) => t(`common:itinerary.dayEditor.activityTypeOptions.${activityType}`),
+    })
+  }, [itinerary, t])
+
+  const itineraryMapRouteLabel = useMemo(() => {
+    if (itineraryMapPins.length === 0) {
+      return ''
+    }
+
+    const firstPin = itineraryMapPins[0]
+    const lastPin = itineraryMapPins[itineraryMapPins.length - 1]
+    const firstLabel = firstPin.locationLabel?.trim() || firstPin.activityTitle
+    const lastLabel = lastPin.locationLabel?.trim() || lastPin.activityTitle
+
+    return firstLabel === lastLabel ? firstLabel : `${firstLabel} → ${lastLabel}`
+  }, [itineraryMapPins])
+
   if (state === 'loading') {
     return (
       <main className="app-shell">
@@ -729,6 +753,44 @@ export function ItineraryDetailPage(): ReactElement {
             </div>
           </div>
         </div>
+
+        <section className="itinerary-detail-panel__map-section" aria-label={t('common:itinerary.dayEditor.itineraryMapTitle')}>
+          {itineraryMapPins.length > 0 ? (
+            <Link
+              className="itinerary-detail-panel__map-launcher"
+              to={`/?mapItineraryId=${encodeURIComponent(itinerary.id)}`}
+              target="_blank"
+              rel="noreferrer"
+              aria-label={t('common:itinerary.dayEditor.openFullMap')}
+              title={t('common:itinerary.dayEditor.openFullMap')}
+            >
+              <div className="itinerary-detail-panel__map-launcher-copy">
+                <MapTrifold size={40} weight="regular" aria-hidden="true" />
+                <div>
+                  <h2 className="itinerary-detail-panel__map-title">{t('common:itinerary.dayEditor.itineraryMapTitle')}</h2>
+                  <p className="itinerary-detail-panel__map-count">
+                    {itineraryMapRouteLabel}
+                  </p>
+                </div>
+              </div>
+              <span className="itinerary-detail-panel__map-open" aria-hidden="true">
+                <ArrowSquareOut size={20} weight="bold" aria-hidden="true" />
+              </span>
+            </Link>
+          ) : (
+            <div className="itinerary-detail-panel__map-launcher itinerary-detail-panel__map-launcher--disabled">
+              <div className="itinerary-detail-panel__map-launcher-copy">
+                <MapTrifold size={40} weight="regular" aria-hidden="true" />
+                <div>
+                  <h2 className="itinerary-detail-panel__map-title">{t('common:itinerary.dayEditor.itineraryMapTitle')}</h2>
+                  <p className="itinerary-detail-panel__map-count itinerary-detail-panel__map-count--empty">
+                    {t('common:itinerary.dayEditor.mapNoMarkedLocations')}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </section>
 
         {itinerary.activityBench.length > 0 ? (
           <details className="itinerary-detail-bench-summary">

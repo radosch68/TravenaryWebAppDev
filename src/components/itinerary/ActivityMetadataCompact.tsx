@@ -1,6 +1,6 @@
 import type { ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Camera, FilmStrip, LinkSimple, MapPinSimple } from '@phosphor-icons/react'
+import { Camera, FilmStrip, LinkSimple, MapPinSimple, MapTrifold } from '@phosphor-icons/react'
 
 import type { ItineraryActivity, WebReference } from '@/services/contracts'
 import { toGoogleMapsUrl } from '@/utils/location-links'
@@ -201,19 +201,22 @@ export function ActivityMetadataCompact({
                     href={mapsUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="activity-meta-compact__link activity-meta-compact__chip--location"
+                    className={`activity-meta-compact__link activity-meta-compact__chip--location${location.showOnMap ? ' activity-meta-compact__chip--mapped-location' : ''}`}
                     aria-label={t('common:itinerary.activityMeta.openMap', { label: fullLocationLabel })}
                     onClick={(event) => event.stopPropagation()}
                   >
                     <span className="activity-meta-compact__chip-icon" aria-hidden="true">
-                      <MapPinSimple size={14} />
+                      {location.showOnMap ? <MapTrifold size={14} weight="regular" /> : <MapPinSimple size={14} />}
                     </span>
                     <span className="activity-meta-compact__chip-text">{displayLocationLabel}</span>
                   </a>
                 ) : (
-                  <span key={`${fullLocationLabel}-${index}`} className="activity-meta-compact__chip activity-meta-compact__chip--location">
+                  <span
+                    key={`${fullLocationLabel}-${index}`}
+                    className={`activity-meta-compact__chip activity-meta-compact__chip--location${location.showOnMap ? ' activity-meta-compact__chip--mapped-location' : ''}`}
+                  >
                     <span className="activity-meta-compact__chip-icon" aria-hidden="true">
-                      <MapPinSimple size={14} />
+                      {location.showOnMap ? <MapTrifold size={14} weight="regular" /> : <MapPinSimple size={14} />}
                     </span>
                     <span className="activity-meta-compact__chip-text">{displayLocationLabel}</span>
                   </span>
