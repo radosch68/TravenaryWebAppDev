@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { AnchorSimple, ArrowRight, ArrowSquareOut, CaretDoubleUp, CaretDown, CaretRight, MagnifyingGlass, Plus, Trash } from '@phosphor-icons/react'
 
 import { DialogShell } from '@/components/DialogShell'
-import type { PhotoSearchResult, ActivityType, AccommodationPlatform, ActivityLocation, ItineraryActivity, WebReference } from '@/services/contracts'
+import type { PhotoSearchResult, ActivityType, AccommodationPlatform, ActivityLocation, ErrorDetail, ItineraryActivity, WebReference } from '@/services/contracts'
 import { searchPhotos } from '@/services/itinerary-service'
 import { generateClientId } from '@/utils/client-id'
 import { formatLocalDate, formatLocalTime, getLocalizedTimeInputPlaceholder } from '@/utils/date-format'
@@ -35,6 +35,7 @@ const ACTIVITY_TYPE_LABEL_KEY: Record<ActivityType, string> = {
 
 const MAX_REFERENCE_ROWS = 10
 const MAX_LOCATION_ROWS = 10
+const AUTO_EXPAND_SECTION_ITEM_LIMIT = 4
 
 type ReferenceType = NonNullable<WebReference['type']>
 
@@ -66,6 +67,7 @@ interface LocationDraftRow {
 }
 
 type ReferenceAddDialogMode = 'manual' | 'photo'
+type LocationErrorTarget = 'address' | 'row'
 
 const PHOTO_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp', 'tif', 'tiff', 'svg', 'avif', 'heic', 'heif', 'jfif'])
 const VIDEO_EXTENSIONS = new Set(['mp4', 'mov', 'avi', 'webm', 'm4v', 'mkv', 'mpeg', 'mpg', '3gp', 'ogv'])
@@ -224,13 +226,73 @@ function toLocationDraftGoogleMapsUrl(row: LocationDraftRow): string | null {
   return toGoogleMapsUrl({ address: row.address })
 }
 
+function readErrorCauseDetails(error: unknown): ErrorDetail[] | undefined {
+  if (!(error instanceof Error) || !('cause' in error)) {
+    return undefined
+  }
+
+  return Array.isArray(error.cause) ? error.cause as ErrorDetail[] : undefined
+}
+
+function mapLocationSaveErrors(
+  details: ErrorDetail[] | undefined,
+  rows: LocationDraftRow[],
+): { errors: Record<string, string>; targets: Record<string, LocationErrorTarget> } {
+  const errors: Record<string, string> = {}
+  const targets: Record<string, LocationErrorTarget> = {}
+
+  if (!details) {
+    return { errors, targets }
+  }
+
+  details.forEach((detail) => {
+    const match = detail.field?.match(/\.locations\.(\d+)\./)
+    if (!match) {
+      return
+    }
+
+    const rowIndex = Number(match[1])
+    const rowId = rows[rowIndex]?.id
+    if (!rowId || errors[rowId]) {
+      return
+    }
+
+    errors[rowId] = detail.message
+    targets[rowId] = 'address'
+  })
+
+  return { errors, targets }
+}
+
+function clearCoordinatesForRowsWithErrors(
+  rows: LocationDraftRow[],
+  errors: Record<string, string>,
+): LocationDraftRow[] {
+  if (Object.keys(errors).length === 0) {
+    return rows
+  }
+
+  return rows.map((row) => (
+    errors[row.id]
+      ? {
+          ...row,
+          longitude: '',
+          latitude: '',
+          initialLongitude: '',
+          initialLatitude: '',
+          coordinatesManualOverride: false,
+        }
+      : row
+  ))
+}
+
 interface ActivityFormPanelProps {
   activity?: ItineraryActivity
   activityType: ActivityType
   owningDayDate?: string
   createOwnBlock?: boolean
   blockDividerTitle?: string
-  onSave: (payload: ActivityFormSavePayload) => void
+  onSave: (payload: ActivityFormSavePayload) => Promise<void> | void
   onCancel: () => void
   disabled?: boolean
 }
@@ -287,12 +349,13 @@ export function ActivityFormPanel({
   const [locationRows, setLocationRows] = useState<LocationDraftRow[]>(initialLocationRows)
   const [commonSectionOpen, setCommonSectionOpen] = useState(true)
   const [activityDetailsSectionOpen, setActivityDetailsSectionOpen] = useState(false)
-  const [referenceSectionOpen, setReferenceSectionOpen] = useState(false)
-  const [locationSectionOpen, setLocationSectionOpen] = useState(false)
+  const [referenceSectionOpen, setReferenceSectionOpen] = useState(initialReferenceRows.length <= AUTO_EXPAND_SECTION_ITEM_LIMIT)
+  const [locationSectionOpen, setLocationSectionOpen] = useState(initialLocationRows.length <= AUTO_EXPAND_SECTION_ITEM_LIMIT)
   const [referenceRowOpen, setReferenceRowOpen] = useState<Record<string, boolean>>(() => toRowOpenState(initialReferenceRows))
   const [locationRowOpen, setLocationRowOpen] = useState<Record<string, boolean>>(() => toRowOpenState(initialLocationRows))
   const [referenceErrors, setReferenceErrors] = useState<Record<string, string>>({})
   const [locationErrors, setLocationErrors] = useState<Record<string, string>>({})
+  const [locationErrorTargets, setLocationErrorTargets] = useState<Record<string, LocationErrorTarget>>({})
   const [referenceAddDialogMode, setReferenceAddDialogMode] = useState<ReferenceAddDialogMode | null>(null)
   const [locationAddDialogOpen, setLocationAddDialogOpen] = useState(false)
   const [referenceAddRow, setReferenceAddRow] = useState<ReferenceDraftRow>(() => createEmptyReferenceRow())
@@ -304,8 +367,11 @@ export function ActivityFormPanel({
   const [photoSearchError, setPhotoSearchError] = useState<string | null>(null)
   const [photoSearchResults, setPhotoSearchResults] = useState<PhotoSearchResult[]>([])
   const [photoSearchSelected, setPhotoSearchSelected] = useState<Record<string, boolean>>({})
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
   const timeInputRef = useRef<HTMLInputElement | null>(null)
   const timeEndInputRef = useRef<HTMLInputElement | null>(null)
+  const isFormDisabled = disabled || isSubmitting
 
   const handleTimeInput = (value: string): void => {
     setTime(value)
@@ -334,6 +400,15 @@ export function ActivityFormPanel({
   ): void => {
     setLocationRows((prev) => prev.map((row) => (row.id === rowId ? { ...row, ...patch } : row)))
     setLocationErrors((prev) => {
+      if (!(rowId in prev)) {
+        return prev
+      }
+
+      const next = { ...prev }
+      delete next[rowId]
+      return next
+    })
+    setLocationErrorTargets((prev) => {
       if (!(rowId in prev)) {
         return prev
       }
@@ -653,8 +728,9 @@ export function ActivityFormPanel({
     closeReferenceAddDialog()
   }
 
-  const handleSubmit = (): void => {
+  const handleSubmit = async (): Promise<void> => {
     if (!title.trim()) return
+    setSubmitError(null)
 
     const liveTime = normalizeTimeValue(timeInputRef.current?.value ?? time)
     const liveTimeEnd = normalizeTimeValue(timeEndInputRef.current?.value ?? timeEnd)
@@ -764,6 +840,7 @@ export function ActivityFormPanel({
 
     setReferenceErrors(nextReferenceErrors)
     setLocationErrors(nextLocationErrors)
+    setLocationErrorTargets({})
 
     if (Object.keys(nextReferenceErrors).length > 0 || Object.keys(nextLocationErrors).length > 0) {
       return
@@ -815,11 +892,27 @@ export function ActivityFormPanel({
       result.details = activity.details
     }
 
-    onSave({
-      activity: result,
-      createOwnBlock: isCreate ? createOwnBlock : false,
-      dividerTitle: isCreate ? blockDividerTitle : '',
-    })
+    setIsSubmitting(true)
+    try {
+      await onSave({
+        activity: result,
+        createOwnBlock: isCreate ? createOwnBlock : false,
+        dividerTitle: isCreate ? blockDividerTitle : '',
+      })
+    } catch (error) {
+      const mappedLocationErrors = mapLocationSaveErrors(readErrorCauseDetails(error), locationRows)
+      if (Object.keys(mappedLocationErrors.errors).length > 0) {
+        setLocationRows((prev) => clearCoordinatesForRowsWithErrors(prev, mappedLocationErrors.errors))
+        setLocationErrors(mappedLocationErrors.errors)
+        setLocationErrorTargets(mappedLocationErrors.targets)
+        setLocationSectionOpen(true)
+        setSubmitError(null)
+      } else {
+        setSubmitError(error instanceof Error ? error.message : t('common:itinerary.dayEditor.saveFailed'))
+      }
+
+      setIsSubmitting(false)
+    }
   }
 
   const typeColor = ACTIVITY_TYPE_COLOR[activityType]
@@ -849,6 +942,10 @@ export function ActivityFormPanel({
   const isReferenceLimitReached = referenceRows.length >= MAX_REFERENCE_ROWS
   const isLocationLimitReached = locationRows.length >= MAX_LOCATION_ROWS
   const handleDialogClose = (): void => {
+    if (isSubmitting) {
+      return
+    }
+
     if (referenceAddDialogOpen) {
       closeReferenceAddDialog()
       return
@@ -880,14 +977,15 @@ export function ActivityFormPanel({
         <button
           type="button"
           className="button-primary"
-          onClick={handleSubmit}
-          disabled={disabled || !title.trim()}
+          onClick={() => void handleSubmit()}
+          disabled={isFormDisabled || !title.trim()}
         >
-          {t('common:save')}
+          {isSubmitting ? t('common:itinerary.edit.saving') : t('common:save')}
         </button>
       }
     >
     <div className="activity-form-panel">
+      {submitError ? <p className="activity-form-panel__submit-error" role="alert">{submitError}</p> : null}
 
       <section className="activity-form-panel__section" aria-label={t('common:itinerary.dayEditor.commonTitle')}>
         <div className="activity-form-panel__section-header">
@@ -897,7 +995,7 @@ export function ActivityFormPanel({
             onClick={() => setCommonSectionOpen((prev) => !prev)}
             aria-expanded={commonSectionOpen}
             aria-controls="activity-common-section-content"
-            disabled={disabled}
+            disabled={isFormDisabled}
           >
             {commonSectionOpen ? <CaretDown size={14} weight="bold" /> : <CaretRight size={14} weight="bold" />}
             <span className="activity-form-panel__section-title">{t('common:itinerary.dayEditor.commonTitle')}</span>
@@ -913,7 +1011,7 @@ export function ActivityFormPanel({
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                disabled={disabled}
+                disabled={isFormDisabled}
               />
             </div>
 
@@ -924,7 +1022,7 @@ export function ActivityFormPanel({
                   id="activity-text"
                   value={text}
                   onChange={(e) => setText(e.target.value)}
-                  disabled={disabled}
+                  disabled={isFormDisabled}
                   rows={5}
                 />
               </div>
@@ -943,7 +1041,7 @@ export function ActivityFormPanel({
                     inputMode={timeInputMode}
                     placeholder={useNativeTimeInput ? undefined : timePlaceholder}
                     autoComplete="off"
-                    disabled={disabled}
+                    disabled={isFormDisabled}
                     step={useNativeTimeInput ? 60 : undefined}
                   />
                 </div>
@@ -958,7 +1056,7 @@ export function ActivityFormPanel({
                     inputMode={timeInputMode}
                     placeholder={useNativeTimeInput ? undefined : timePlaceholder}
                     autoComplete="off"
-                    disabled={disabled}
+                    disabled={isFormDisabled}
                     step={useNativeTimeInput ? 60 : undefined}
                   />
                 </div>
@@ -973,7 +1071,7 @@ export function ActivityFormPanel({
                     type="checkbox"
                     checked={anchorToDay}
                     onChange={(e) => setAnchorToDay(e.target.checked)}
-                    disabled={disabled}
+                    disabled={isFormDisabled}
                   />
                   <span className="activity-form-panel__checkbox-indicator" aria-hidden="true">
                     <span className="activity-form-panel__checkbox-indicator-mark">✓</span>
@@ -999,7 +1097,7 @@ export function ActivityFormPanel({
               onClick={() => setActivityDetailsSectionOpen((prev) => !prev)}
               aria-expanded={activityDetailsSectionOpen}
               aria-controls="activity-details-section-content"
-              disabled={disabled}
+              disabled={isFormDisabled}
             >
               {activityDetailsSectionOpen ? <CaretDown size={14} weight="bold" /> : <CaretRight size={14} weight="bold" />}
               <span className="activity-form-panel__section-title">{activitySpecificSectionTitle}</span>
@@ -1016,7 +1114,7 @@ export function ActivityFormPanel({
                     type="text"
                     value={cuisine}
                     onChange={(e) => setCuisine(e.target.value)}
-                    disabled={disabled}
+                    disabled={isFormDisabled}
                   />
                 </div>
               ) : null}
@@ -1028,7 +1126,7 @@ export function ActivityFormPanel({
                     id="activity-guidance-mode"
                     value={guidanceMode}
                     onChange={(e) => setGuidanceMode(e.target.value as 'selfGuided' | 'guided')}
-                    disabled={disabled}
+                    disabled={isFormDisabled}
                   >
                     <option value="selfGuided">{t('common:itinerary.dayEditor.guidanceModeSelfGuided')}</option>
                     <option value="guided">{t('common:itinerary.dayEditor.guidanceModeGuided')}</option>
@@ -1062,7 +1160,7 @@ export function ActivityFormPanel({
 
                           setNightsInput(String(parsed))
                         }}
-                        disabled={disabled}
+                        disabled={isFormDisabled}
                       />
                     </div>
                     <div className="activity-form-panel__field">
@@ -1085,7 +1183,7 @@ export function ActivityFormPanel({
                           }
                           setGuestsInput(String(parsed))
                         }}
-                        disabled={disabled}
+                        disabled={isFormDisabled}
                       />
                     </div>
                   </div>
@@ -1101,7 +1199,7 @@ export function ActivityFormPanel({
                         inputMode={timeInputMode}
                         placeholder={useNativeTimeInput ? undefined : timePlaceholder}
                         autoComplete="off"
-                        disabled={disabled}
+                        disabled={isFormDisabled}
                         step={useNativeTimeInput ? 60 : undefined}
                       />
                     </div>
@@ -1115,7 +1213,7 @@ export function ActivityFormPanel({
                         inputMode={timeInputMode}
                         placeholder={useNativeTimeInput ? undefined : timePlaceholder}
                         autoComplete="off"
-                        disabled={disabled}
+                        disabled={isFormDisabled}
                         step={useNativeTimeInput ? 60 : undefined}
                       />
                     </div>
@@ -1131,7 +1229,7 @@ export function ActivityFormPanel({
                       inputMode={timeInputMode}
                       placeholder={useNativeTimeInput ? undefined : timePlaceholder}
                       autoComplete="off"
-                      disabled={disabled}
+                      disabled={isFormDisabled}
                       step={useNativeTimeInput ? 60 : undefined}
                     />
                   </div>
@@ -1142,7 +1240,7 @@ export function ActivityFormPanel({
                       id="activity-platform"
                       value={platform}
                       onChange={(e) => setPlatform(e.target.value as AccommodationPlatform | '')}
-                      disabled={disabled}
+                      disabled={isFormDisabled}
                     >
                       <option value="">—</option>
                       <option value="booking">{t('common:itinerary.dayEditor.platformOptions.booking')}</option>
@@ -1160,7 +1258,7 @@ export function ActivityFormPanel({
                       type="tel"
                       value={contactPhone}
                       onChange={(e) => setContactPhone(e.target.value)}
-                      disabled={disabled}
+                      disabled={isFormDisabled}
                     />
                   </div>
 
@@ -1171,7 +1269,7 @@ export function ActivityFormPanel({
                       type="email"
                       value={contactEmail}
                       onChange={(e) => setContactEmail(e.target.value)}
-                      disabled={disabled}
+                      disabled={isFormDisabled}
                     />
                   </div>
 
@@ -1182,7 +1280,7 @@ export function ActivityFormPanel({
                       type="text"
                       value={bookingRef}
                       onChange={(e) => setBookingRef(e.target.value)}
-                      disabled={disabled}
+                      disabled={isFormDisabled}
                     />
                   </div>
                 </>
@@ -1200,7 +1298,7 @@ export function ActivityFormPanel({
             onClick={() => setReferenceSectionOpen((prev) => !prev)}
             aria-expanded={referenceSectionOpen}
             aria-controls="activity-reference-section-content"
-            disabled={disabled}
+            disabled={isFormDisabled}
           >
             {referenceSectionOpen ? <CaretDown size={14} weight="bold" /> : <CaretRight size={14} weight="bold" />}
             <span className="activity-form-panel__section-title">{t('common:itinerary.dayEditor.referencesTitle')}</span>
@@ -1236,7 +1334,7 @@ export function ActivityFormPanel({
                         type="button"
                         className="activity-form-panel__repeatable-move-top-icon"
                         onClick={() => moveReferenceRowToTop(row.id)}
-                        disabled={disabled || rowIndex === 0}
+                        disabled={isFormDisabled || rowIndex === 0}
                         aria-label={t('common:itinerary.dayEditor.moveRowToTop', { index: rowIndex + 1 })}
                         title={t('common:itinerary.dayEditor.moveRowToTop', { index: rowIndex + 1 })}
                       >
@@ -1246,7 +1344,7 @@ export function ActivityFormPanel({
                         type="button"
                         className="activity-form-panel__repeatable-remove-icon"
                         onClick={() => removeReferenceRow(row.id)}
-                        disabled={disabled}
+                        disabled={isFormDisabled}
                         aria-label={t('common:itinerary.dayEditor.removeRow', { index: rowIndex + 1 })}
                         title={t('common:itinerary.dayEditor.removeRow', { index: rowIndex + 1 })}
                       >
@@ -1265,7 +1363,7 @@ export function ActivityFormPanel({
                             type="text"
                             value={row.caption}
                             onChange={(e) => updateReferenceRow(row.id, { caption: e.target.value })}
-                            disabled={disabled}
+                            disabled={isFormDisabled}
                           />
                         </div>
                         <div className="activity-form-panel__field">
@@ -1274,7 +1372,7 @@ export function ActivityFormPanel({
                             id={`activity-reference-type-${row.id}`}
                             value={row.type}
                             onChange={(e) => updateReferenceRow(row.id, { type: e.target.value as ReferenceType | '' })}
-                            disabled={disabled}
+                            disabled={isFormDisabled}
                           >
                             <option value="">{t('common:itinerary.dayEditor.referenceTypeOptions.none')}</option>
                             <option value="webpage">{t('common:itinerary.dayEditor.referenceTypeOptions.webpage')}</option>
@@ -1305,7 +1403,7 @@ export function ActivityFormPanel({
                           type="url"
                           value={row.url}
                           onChange={(e) => updateReferenceRow(row.id, { url: e.target.value })}
-                          disabled={disabled}
+                          disabled={isFormDisabled}
                           placeholder="https://"
                         />
                       </div>
@@ -1324,7 +1422,7 @@ export function ActivityFormPanel({
                 type="button"
                 className="activity-form-panel__section-icon-action"
                 onClick={() => openReferenceAddDialog('manual')}
-                disabled={disabled || isReferenceLimitReached}
+                disabled={isFormDisabled || isReferenceLimitReached}
                 aria-label={t('common:itinerary.dayEditor.referencesAdd')}
                 title={t('common:itinerary.dayEditor.referencesAdd')}
               >
@@ -1334,7 +1432,7 @@ export function ActivityFormPanel({
                 type="button"
                 className="activity-form-panel__section-find-action"
                 onClick={() => openReferenceAddDialog('photo')}
-                disabled={disabled || isReferenceLimitReached}
+                disabled={isFormDisabled || isReferenceLimitReached}
                 aria-label={t('common:itinerary.dayEditor.searchPhotos')}
                 title={t('common:itinerary.dayEditor.searchPhotos')}
               >
@@ -1354,7 +1452,7 @@ export function ActivityFormPanel({
             onClick={() => setLocationSectionOpen((prev) => !prev)}
             aria-expanded={locationSectionOpen}
             aria-controls="activity-location-section-content"
-            disabled={disabled}
+            disabled={isFormDisabled}
           >
             {locationSectionOpen ? <CaretDown size={14} weight="bold" /> : <CaretRight size={14} weight="bold" />}
             <span className="activity-form-panel__section-title">{t('common:itinerary.dayEditor.locationsTitle')}</span>
@@ -1372,9 +1470,11 @@ export function ActivityFormPanel({
               const isRowOpen = locationRowOpen[row.id] ?? true
               const locationMapsUrl = toLocationDraftGoogleMapsUrl(row)
               const locationLinkLabel = getLocationRowSummary(row, rowIndex)
+              const locationError = locationErrors[row.id]
+              const locationErrorTarget = locationErrorTargets[row.id] ?? 'row'
 
               return (
-                <div key={row.id} className="activity-form-panel__repeatable-row">
+                <div key={row.id} className={`activity-form-panel__repeatable-row${locationError ? ' activity-form-panel__repeatable-row--error' : ''}`}>
                   <div className="activity-form-panel__repeatable-header">
                     <button
                       type="button"
@@ -1384,6 +1484,15 @@ export function ActivityFormPanel({
                       aria-controls={`activity-location-row-content-${row.id}`}
                     >
                       {isRowOpen ? <CaretDown size={13} weight="bold" /> : <CaretRight size={13} weight="bold" />}
+                      {locationError ? (
+                        <span
+                          className="activity-form-panel__repeatable-error-indicator"
+                          aria-label={locationError}
+                          title={locationError}
+                        >
+                          !
+                        </span>
+                      ) : null}
                       <span className="activity-form-panel__repeatable-title">{getLocationRowSummary(row, rowIndex)}</span>
                     </button>
                     <div className="activity-form-panel__repeatable-actions">
@@ -1391,7 +1500,7 @@ export function ActivityFormPanel({
                         type="button"
                         className="activity-form-panel__repeatable-move-top-icon"
                         onClick={() => moveLocationRowToTop(row.id)}
-                        disabled={disabled || rowIndex === 0}
+                        disabled={isFormDisabled || rowIndex === 0}
                         aria-label={t('common:itinerary.dayEditor.moveRowToTop', { index: rowIndex + 1 })}
                         title={t('common:itinerary.dayEditor.moveRowToTop', { index: rowIndex + 1 })}
                       >
@@ -1401,7 +1510,7 @@ export function ActivityFormPanel({
                         type="button"
                         className="activity-form-panel__repeatable-remove-icon"
                         onClick={() => removeLocationRow(row.id)}
-                        disabled={disabled}
+                        disabled={isFormDisabled}
                         aria-label={t('common:itinerary.dayEditor.removeRow', { index: rowIndex + 1 })}
                         title={t('common:itinerary.dayEditor.removeRow', { index: rowIndex + 1 })}
                       >
@@ -1420,7 +1529,7 @@ export function ActivityFormPanel({
                             type="text"
                             value={row.caption}
                             onChange={(e) => updateLocationRow(row.id, { caption: e.target.value })}
-                            disabled={disabled}
+                            disabled={isFormDisabled}
                           />
                         </div>
                         <div className="activity-form-panel__field">
@@ -1430,7 +1539,7 @@ export function ActivityFormPanel({
                             type="text"
                             value={row.longitude}
                             onChange={(e) => updateLocationCoordinates(row.id, 'longitude', e.target.value)}
-                            disabled={disabled}
+                            disabled={isFormDisabled}
                           />
                         </div>
                         <div className="activity-form-panel__field">
@@ -1440,7 +1549,7 @@ export function ActivityFormPanel({
                             type="text"
                             value={row.latitude}
                             onChange={(e) => updateLocationCoordinates(row.id, 'latitude', e.target.value)}
-                            disabled={disabled}
+                            disabled={isFormDisabled}
                           />
                         </div>
                       </div>
@@ -1466,17 +1575,20 @@ export function ActivityFormPanel({
                           type="text"
                           value={row.address}
                           onChange={(e) => updateLocationRow(row.id, { address: e.target.value })}
-                          disabled={disabled}
+                          disabled={isFormDisabled}
                         />
+                        {locationError && locationErrorTarget === 'address' ? (
+                          <p className="activity-form-panel__field-error" role="alert">{locationError}</p>
+                        ) : null}
                       </div>
-                      <div className="activity-form-panel__block-option">
+                      <div className="activity-form-panel__block-option activity-form-panel__block-option--map-toggle">
                         <label className="activity-form-panel__checkbox" htmlFor={`activity-location-show-on-map-${row.id}`}>
                           <input
                             id={`activity-location-show-on-map-${row.id}`}
                             type="checkbox"
                             checked={row.showOnMap}
                             onChange={(event) => updateLocationRow(row.id, { showOnMap: event.target.checked })}
-                            disabled={disabled}
+                            disabled={isFormDisabled}
                           />
                           <span className="activity-form-panel__checkbox-indicator" aria-hidden="true">
                             <span className="activity-form-panel__checkbox-indicator-mark">✓</span>
@@ -1487,8 +1599,8 @@ export function ActivityFormPanel({
                     </div>
                   ) : null}
 
-                  {locationErrors[row.id] ? (
-                    <p className="activity-form-panel__field-error" role="alert">{locationErrors[row.id]}</p>
+                  {locationError && locationErrorTarget !== 'address' ? (
+                    <p className="activity-form-panel__field-error" role="alert">{locationError}</p>
                   ) : null}
                 </div>
               )
@@ -1499,7 +1611,7 @@ export function ActivityFormPanel({
                 type="button"
                 className="activity-form-panel__section-icon-action"
                 onClick={openLocationAddDialog}
-                disabled={disabled || isLocationLimitReached}
+                disabled={isFormDisabled || isLocationLimitReached}
                 aria-label={t('common:itinerary.dayEditor.locationsAdd')}
                 title={t('common:itinerary.dayEditor.locationsAdd')}
               >
@@ -1522,7 +1634,7 @@ export function ActivityFormPanel({
             type="button"
             className="button-primary"
             onClick={isReferencePhotoDialog ? handleAddSelectedPhotos : addReferenceRowFromDialog}
-            disabled={disabled || (isReferencePhotoDialog && photoSearchBusy)}
+            disabled={isFormDisabled || (isReferencePhotoDialog && photoSearchBusy)}
           >
             {t('common:save')}
           </button>
@@ -1542,7 +1654,7 @@ export function ActivityFormPanel({
                       setReferenceAddRow((prev) => ({ ...prev, caption: e.target.value }))
                       setReferenceAddError(null)
                     }}
-                    disabled={disabled}
+                    disabled={isFormDisabled}
                   />
                 </div>
                 <div className="activity-form-panel__field">
@@ -1554,7 +1666,7 @@ export function ActivityFormPanel({
                       setReferenceAddRow((prev) => ({ ...prev, type: e.target.value as ReferenceType | '' }))
                       setReferenceAddError(null)
                     }}
-                    disabled={disabled}
+                    disabled={isFormDisabled}
                   >
                     <option value="">{t('common:itinerary.dayEditor.referenceTypeOptions.none')}</option>
                     <option value="webpage">{t('common:itinerary.dayEditor.referenceTypeOptions.webpage')}</option>
@@ -1597,7 +1709,7 @@ export function ActivityFormPanel({
                     })
                     setReferenceAddError(null)
                   }}
-                  disabled={disabled}
+                  disabled={isFormDisabled}
                   placeholder="https://"
                 />
               </div>
@@ -1621,7 +1733,7 @@ export function ActivityFormPanel({
                           type="checkbox"
                           checked={Boolean(photoSearchSelected[result.url])}
                           onChange={() => togglePhotoSearchSelection(result.url)}
-                          disabled={disabled || photoSearchBusy}
+                          disabled={isFormDisabled || photoSearchBusy}
                           aria-label={t('common:itinerary.dayEditor.photoSearchSelectPhoto', { index: resultIndex + 1 })}
                         />
                         <a
@@ -1654,14 +1766,14 @@ export function ActivityFormPanel({
                       e.preventDefault()
                       void handleSearchPhotos()
                     }}
-                    disabled={disabled || photoSearchBusy}
+                    disabled={isFormDisabled || photoSearchBusy}
                     placeholder={t('common:itinerary.dayEditor.photoSearchKeywordsPlaceholder')}
                   />
                   <button
                     type="button"
                     className="activity-form-panel__photo-search-go"
                     onClick={() => void handleSearchPhotos()}
-                    disabled={disabled || photoSearchBusy || isReferenceLimitReached}
+                    disabled={isFormDisabled || photoSearchBusy || isReferenceLimitReached}
                     aria-label={t('common:itinerary.dayEditor.photoSearchGo')}
                     title={t('common:itinerary.dayEditor.photoSearchGo')}
                   >
@@ -1686,7 +1798,7 @@ export function ActivityFormPanel({
         onClose={closeLocationAddDialog}
         className={`${formStyles.modal} ${formStyles.nestedModal}`}
         footer={(
-          <button type="button" className="button-primary" onClick={addLocationRowFromDialog} disabled={disabled}>{t('common:save')}</button>
+          <button type="button" className="button-primary" onClick={addLocationRowFromDialog} disabled={isFormDisabled}>{t('common:save')}</button>
         )}
       >
         <div className="activity-form-panel">
@@ -1701,7 +1813,7 @@ export function ActivityFormPanel({
                   setLocationAddRow((prev) => ({ ...prev, caption: e.target.value }))
                   setLocationAddError(null)
                 }}
-                disabled={disabled}
+                disabled={isFormDisabled}
               />
             </div>
             <div className="activity-form-panel__field">
@@ -1714,7 +1826,7 @@ export function ActivityFormPanel({
                   setLocationAddRow((prev) => ({ ...prev, longitude: e.target.value, coordinatesManualOverride: true }))
                   setLocationAddError(null)
                 }}
-                disabled={disabled}
+                disabled={isFormDisabled}
               />
             </div>
             <div className="activity-form-panel__field">
@@ -1727,7 +1839,7 @@ export function ActivityFormPanel({
                   setLocationAddRow((prev) => ({ ...prev, latitude: e.target.value, coordinatesManualOverride: true }))
                   setLocationAddError(null)
                 }}
-                disabled={disabled}
+                disabled={isFormDisabled}
               />
             </div>
           </div>
@@ -1755,7 +1867,7 @@ export function ActivityFormPanel({
                 setLocationAddRow((prev) => ({ ...prev, address: e.target.value }))
                 setLocationAddError(null)
               }}
-              disabled={disabled}
+              disabled={isFormDisabled}
             />
           </div>
           <div className="activity-form-panel__block-option">
@@ -1768,7 +1880,7 @@ export function ActivityFormPanel({
                   setLocationAddRow((prev) => ({ ...prev, showOnMap: event.target.checked }))
                   setLocationAddError(null)
                 }}
-                disabled={disabled}
+                disabled={isFormDisabled}
               />
               <span className="activity-form-panel__checkbox-indicator" aria-hidden="true">
                 <span className="activity-form-panel__checkbox-indicator-mark">✓</span>

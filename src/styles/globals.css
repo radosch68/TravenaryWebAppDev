@@ -3902,6 +3902,10 @@ button:disabled {
   align-items: center;
 }
 
+.activity-form-panel__block-option--map-toggle {
+  padding-top: 0.45rem;
+}
+
 .activity-form-panel__checkbox {
   display: inline-flex;
   align-items: center;
@@ -4272,6 +4276,26 @@ button:disabled {
   background: rgba(127, 85, 29, 0.08);
 }
 
+.activity-form-panel__repeatable-row--error {
+  border-color: rgba(180, 50, 50, 0.32);
+  background: rgba(180, 50, 50, 0.04);
+}
+
+.activity-form-panel__repeatable-error-indicator {
+  inline-size: 1rem;
+  block-size: 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
 .activity-form-panel__repeatable-title {
   font-size: 0.78rem;
   font-weight: 600;
@@ -4346,6 +4370,17 @@ button:disabled {
   margin: -0.15rem 0 0;
   font-size: 0.73rem;
   color: var(--danger);
+}
+
+.activity-form-panel__submit-error {
+  margin: 0 0 0.75rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid rgba(180, 50, 50, 0.28);
+  border-radius: 8px;
+  background: rgba(180, 50, 50, 0.08);
+  color: var(--danger);
+  font-size: 0.82rem;
+  line-height: 1.35;
 }
 
 @media (max-width: 520px) {

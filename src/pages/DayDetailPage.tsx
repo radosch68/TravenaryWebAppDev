@@ -26,6 +26,7 @@ import type { LocationMapPin } from '@/components/itinerary/location-map-pins'
 import { ApiError } from '@/services/contracts'
 import { getItinerary, updateItinerary } from '@/services/itinerary-service'
 import type { ItineraryDetail, ItineraryActivity, ItineraryActivityInput, ItineraryDay, UpdateItineraryRequest, ActivityType } from '@/services/contracts'
+import type { ErrorDetail } from '@/services/contracts'
 import { formatLocalDate, formatWeekday } from '@/utils/date-format'
 import { isActivityAnchored } from '@/utils/activity-classification'
 import { sectionKey } from '@/utils/day-edit-transforms'
@@ -128,8 +129,9 @@ export function DayDetailPage(): ReactElement {
     summary?: string | undefined
     useSummaryOverride?: boolean
     activityBenchOverride?: ItineraryActivity[]
-  }): Promise<void> => {
-    if (!itinerary || !itineraryId) return
+    suppressSaveError?: boolean
+  }): Promise<{ message: string; details?: ErrorDetail[] } | null> => {
+    if (!itinerary || !itineraryId) return null
 
     setSaveError(null)
     const requestId = ++latestSaveRequestIdRef.current
@@ -152,7 +154,7 @@ export function DayDetailPage(): ReactElement {
 
       const updated = await updateItinerary(itineraryId, { days: updatedDays, activityBench })
       if (requestId !== latestSaveRequestIdRef.current) {
-        return
+        return null
       }
 
       setItinerary(updated)
@@ -162,18 +164,25 @@ export function DayDetailPage(): ReactElement {
       if (updatedDay) {
         applyServerState(updatedDay)
       }
+      return null
     } catch (error) {
       if (requestId !== latestSaveRequestIdRef.current) {
-        return
+        return null
       }
 
+      let message = t('common:itinerary.dayEditor.saveFailed')
+      let details: ErrorDetail[] | undefined
       if (error instanceof ApiError) {
         const firstDetail = error.details?.[0]?.message
-        setSaveError(firstDetail ?? error.message ?? t('common:itinerary.dayEditor.saveFailed'))
-        return
+        message = firstDetail ?? error.message ?? message
+        details = error.details
       }
 
-      setSaveError(t('common:itinerary.dayEditor.saveFailed'))
+      if (!options?.suppressSaveError) {
+        setSaveError(message)
+      }
+
+      return { message, details }
     }
   }, [itinerary, itineraryId, dayNum, day, pendingDaySummary, getFlatActivities, applyServerState, t])
 
@@ -386,8 +395,9 @@ export function DayDetailPage(): ReactElement {
     void persistDay()
   }, [sections, moveDayActivityToBench, moveBenchActivityToCurrentDay, moveDayActivityToNewBlock, reorderInBlock, moveBetweenBlocks, persistDay])
 
-  const handleFormSave = useCallback(({ activity, createOwnBlock, dividerTitle }: ActivityFormSavePayload): void => {
+  const handleFormSave = useCallback(async ({ activity, createOwnBlock, dividerTitle }: ActivityFormSavePayload): Promise<void> => {
     setMoveError(null)
+    setSaveError(null)
     if (formMode === 'create' && addToBlockKey) {
       if (createOwnBlock) {
         addActivityAsNewBlock(addToBlockKey, activity, dividerTitle)
@@ -397,11 +407,19 @@ export function DayDetailPage(): ReactElement {
     } else if (formMode === 'edit') {
       updateActivityInStore(activity)
     }
+
+    const saveErrorResult = await persistDay({ suppressSaveError: true })
+    if (saveErrorResult) {
+      if (day) {
+        applyServerState(day)
+      }
+      throw new Error(saveErrorResult.message, { cause: saveErrorResult.details })
+    }
+
     setFormMode(null)
     setEditingActivityId(null)
     setAddToBlockKey(null)
-    void persistDay()
-  }, [formMode, addToBlockKey, addActivity, addActivityAsNewBlock, updateActivityInStore, persistDay])
+  }, [formMode, addToBlockKey, addActivity, addActivityAsNewBlock, updateActivityInStore, persistDay, day, applyServerState])
 
   const handleFormCancel = useCallback((): void => {
     setFormMode(null)
