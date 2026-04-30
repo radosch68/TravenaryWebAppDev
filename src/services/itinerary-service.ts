@@ -127,6 +127,15 @@ export async function createShareLink(
   })
 }
 
+export async function getShareLink(
+  itineraryId: string,
+): Promise<ShareTokenResponse> {
+  return apiRequest<ShareTokenResponse>(`/itineraries/${itineraryId}/share`, {
+    method: 'GET',
+    protected: true,
+  })
+}
+
 export async function revokeShareLink(
   itineraryId: string,
 ): Promise<void> {
