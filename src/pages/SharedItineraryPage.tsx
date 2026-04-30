@@ -29,7 +29,7 @@ export function SharedItineraryPage(): ReactElement {
       setItinerary(payload)
       setState('ready')
     } catch (error) {
-      if (error instanceof ApiError && error.status === 404) {
+      if (error instanceof ApiError && (error.status === 400 || error.status === 404)) {
         setState('not-found')
         return
       }
