@@ -1,18 +1,23 @@
 import type { ReactElement } from 'react'
-import { useCallback, useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 
 import { BrandBanner } from '@/components/BrandBanner'
-import { PlanningDaySection } from '@/components/itinerary/PlanningDaySection'
+import { ItineraryActivityBenchSummary } from '@/components/itinerary/ItineraryActivityBenchSummary'
+import { ItineraryMapLauncher } from '@/components/itinerary/ItineraryMapLauncher'
+import { ItineraryTimelineView } from '@/components/itinerary/ItineraryTimelineView'
+import { buildLocationMapPinsFromDays } from '@/components/itinerary/location-map-pins'
+import type { LocationMapPin } from '@/components/itinerary/location-map-pins'
 import { ApiError } from '@/services/contracts'
 import { getSharedItinerary } from '@/services/itinerary-service'
 import type { SharedItineraryDetail } from '@/services/contracts'
-import { formatLocalDate, formatWeekday } from '@/utils/date-format'
+import { formatLocalDate } from '@/utils/date-format'
 import { unsplashUrl } from '@/utils/unsplash-url'
 
 export function SharedItineraryPage(): ReactElement {
   const { shareToken } = useParams<{ shareToken: string }>()
+  const navigate = useNavigate()
   const { t, i18n } = useTranslation(['common'])
 
   const [itinerary, setItinerary] = useState<SharedItineraryDetail | null>(null)
@@ -44,6 +49,24 @@ export function SharedItineraryPage(): ReactElement {
 
     return () => window.clearTimeout(handle)
   }, [loadShared])
+
+  const itineraryMapPins = useMemo<LocationMapPin[]>(() => {
+    if (!itinerary) {
+      return []
+    }
+
+    return buildLocationMapPinsFromDays(itinerary.days, {
+      getActivityTypeLabel: (activityType) => t(`common:itinerary.dayEditor.activityTypeOptions.${activityType}`),
+    })
+  }, [itinerary, t])
+
+  const handleOpenDayDetail = useCallback((dayNumber: number): void => {
+    if (!shareToken) {
+      return
+    }
+
+    navigate(`/s/${shareToken}/days/${dayNumber}`)
+  }, [navigate, shareToken])
 
   if (state === 'loading') {
     return (
@@ -129,37 +152,22 @@ export function SharedItineraryPage(): ReactElement {
           </span>
         </div>
 
-        <ul className="itinerary-day-list">
-          {itinerary.days.map((day, index) => (
-            <li
-              key={`shared-day-${day.dayNumber}`}
-              className={`itinerary-day-list__item itinerary-day-list__item--${index % 2 === 0 ? 'odd' : 'even'}`}
-            >
-              <div className="itinerary-day-header">
-                <div className="itinerary-day-header__left">
-                  <span className="itinerary-day-header__weekday">
-                    {day.date ? formatWeekday(day.date, i18n.language) : '—'}
-                  </span>
-                  <span className="itinerary-day-header__index">
-                    {t('common:itinerary.dayNumber', { dayNumber: day.dayNumber })}
-                  </span>
-                </div>
-                <span className="itinerary-day-header__date">
-                  {day.date ? formatLocalDate(day.date, i18n.language) : t('common:itinerary.missingDate')}
-                </span>
-              </div>
-              {day.summary ? <p className="itinerary-day-summary">{day.summary}</p> : null}
+        <ItineraryMapLauncher
+          pins={itineraryMapPins}
+          title={t('common:itinerary.dayEditor.itineraryMapTitle')}
+          emptyLabel={t('common:itinerary.dayEditor.mapNoMarkedLocations')}
+          openLabel={t('common:itinerary.dayEditor.openFullMap')}
+          to={`/s/${shareToken}/map`}
+        />
 
-              <PlanningDaySection
-                day={day}
-                dayIndex={index}
-                totalDays={itinerary.days.length}
-                disabled
-                showDropSlots={false}
-              />
-            </li>
-          ))}
-        </ul>
+        <ItineraryActivityBenchSummary activityBench={itinerary.activityBench} />
+
+        <ItineraryTimelineView
+          itinerary={itinerary}
+          onOpenDay={handleOpenDayDetail}
+          referenceDisplayMode="thumbnails"
+          contentMode="planning-blocks"
+        />
 
         <p className="shared-page__footer">{t('common:itinerary.share.poweredBy')}</p>
       </section>
