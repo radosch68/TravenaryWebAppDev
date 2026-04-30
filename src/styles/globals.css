@@ -2768,9 +2768,13 @@ button:disabled {
   flex-shrink: 0;
 }
 
-.planning-activity__title {
+.planning-activity__title,
+.timeline-activity__title {
   flex: 1;
   min-width: 0;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
   overflow-wrap: anywhere;
 }
 
@@ -2780,9 +2784,12 @@ button:disabled {
   white-space: nowrap;
 }
 
-.planning-activity__desc {
+.planning-activity__desc,
+.timeline-activity__desc {
   width: 100%;
   font-size: 0.78rem;
+  font-weight: inherit;
+  line-height: inherit;
   color: var(--text-muted);
   display: -webkit-box;
   -webkit-line-clamp: 1;
@@ -2831,12 +2838,6 @@ button:disabled {
   flex-shrink: 0;
 }
 
-.timeline-activity__title {
-  flex: 1;
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
 .timeline-activity__anchored-marker {
   font-size: 0.7rem;
   padding: 0.1rem 0.35rem;
@@ -2845,16 +2846,6 @@ button:disabled {
   color: var(--accent, #4a90d9);
   white-space: nowrap;
   flex-shrink: 0;
-}
-
-.timeline-activity__desc {
-  width: 100%;
-  font-size: 0.78rem;
-  color: var(--text-muted);
-  display: -webkit-box;
-  -webkit-line-clamp: 1;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
 }
 
 .timeline-activity__meta {

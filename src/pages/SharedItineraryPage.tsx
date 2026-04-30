@@ -4,11 +4,11 @@ import { useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 
 import { BrandBanner } from '@/components/BrandBanner'
-import { ItineraryTimelineView } from '@/components/itinerary/ItineraryTimelineView'
+import { PlanningDaySection } from '@/components/itinerary/PlanningDaySection'
 import { ApiError } from '@/services/contracts'
 import { getSharedItinerary } from '@/services/itinerary-service'
 import type { SharedItineraryDetail } from '@/services/contracts'
-import { formatLocalDate } from '@/utils/date-format'
+import { formatLocalDate, formatWeekday } from '@/utils/date-format'
 import { unsplashUrl } from '@/utils/unsplash-url'
 
 export function SharedItineraryPage(): ReactElement {
@@ -129,7 +129,37 @@ export function SharedItineraryPage(): ReactElement {
           </span>
         </div>
 
-        <ItineraryTimelineView itinerary={itinerary} />
+        <ul className="itinerary-day-list">
+          {itinerary.days.map((day, index) => (
+            <li
+              key={`shared-day-${day.dayNumber}`}
+              className={`itinerary-day-list__item itinerary-day-list__item--${index % 2 === 0 ? 'odd' : 'even'}`}
+            >
+              <div className="itinerary-day-header">
+                <div className="itinerary-day-header__left">
+                  <span className="itinerary-day-header__weekday">
+                    {day.date ? formatWeekday(day.date, i18n.language) : '—'}
+                  </span>
+                  <span className="itinerary-day-header__index">
+                    {t('common:itinerary.dayNumber', { dayNumber: day.dayNumber })}
+                  </span>
+                </div>
+                <span className="itinerary-day-header__date">
+                  {day.date ? formatLocalDate(day.date, i18n.language) : t('common:itinerary.missingDate')}
+                </span>
+              </div>
+              {day.summary ? <p className="itinerary-day-summary">{day.summary}</p> : null}
+
+              <PlanningDaySection
+                day={day}
+                dayIndex={index}
+                totalDays={itinerary.days.length}
+                disabled
+                showDropSlots={false}
+              />
+            </li>
+          ))}
+        </ul>
 
         <p className="shared-page__footer">{t('common:itinerary.share.poweredBy')}</p>
       </section>
