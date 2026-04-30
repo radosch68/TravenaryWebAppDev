@@ -32,15 +32,33 @@ jobs:
         run: npm ci
 
       - name: Build
-        run: npm run build
+        run: |
+          BUILD_MODE="production"
+          if [ "${GITHUB_REPOSITORY##*/}" = "TravenaryWebAppDev" ]; then
+            BUILD_MODE="development"
+          fi
+
+          # Keep dependency bundling optimized for a deployed site; BUILD_MODE only selects the Vite env file.
+          export NODE_ENV="production"
+
+          [ -n "$REPO_VITE_BASE_PATH" ] && export VITE_BASE_PATH="$REPO_VITE_BASE_PATH"
+          [ -n "$REPO_VITE_API_BASE_URL" ] && export VITE_API_BASE_URL="$REPO_VITE_API_BASE_URL"
+          [ -n "$REPO_VITE_ENV_LABEL" ] && export VITE_ENV_LABEL="$REPO_VITE_ENV_LABEL"
+          [ -n "$REPO_VITE_ENABLE_SOCIAL_AUTH" ] && export VITE_ENABLE_SOCIAL_AUTH="$REPO_VITE_ENABLE_SOCIAL_AUTH"
+          [ -n "$REPO_VITE_GOOGLE_OAUTH_CLIENT_ID" ] && export VITE_GOOGLE_OAUTH_CLIENT_ID="$REPO_VITE_GOOGLE_OAUTH_CLIENT_ID"
+          [ -n "$REPO_VITE_APPLE_OAUTH_CLIENT_ID" ] && export VITE_APPLE_OAUTH_CLIENT_ID="$REPO_VITE_APPLE_OAUTH_CLIENT_ID"
+          [ -n "$REPO_VITE_GITHUB_OAUTH_CLIENT_ID" ] && export VITE_GITHUB_OAUTH_CLIENT_ID="$REPO_VITE_GITHUB_OAUTH_CLIENT_ID"
+
+          echo "Building frontend with Vite mode: $BUILD_MODE"
+          npm run build -- --mode "$BUILD_MODE"
         env:
-          NODE_ENV: production
-          VITE_BASE_PATH: ${{ vars.VITE_BASE_PATH }}
-          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
-          VITE_ENV_LABEL: ${{ vars.VITE_ENV_LABEL }}
-          VITE_ENABLE_SOCIAL_AUTH: "true"
-          VITE_GOOGLE_OAUTH_CLIENT_ID: 233974104181-2k8kk0i15pqeeqddbpoavq1a5g8biv9b.apps.googleusercontent.com
-          VITE_GITHUB_OAUTH_CLIENT_ID: Ov23lipCpFKASk8Eq4MC
+          REPO_VITE_BASE_PATH: ${{ vars.VITE_BASE_PATH }}
+          REPO_VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+          REPO_VITE_ENV_LABEL: ${{ vars.VITE_ENV_LABEL }}
+          REPO_VITE_ENABLE_SOCIAL_AUTH: ${{ vars.VITE_ENABLE_SOCIAL_AUTH }}
+          REPO_VITE_GOOGLE_OAUTH_CLIENT_ID: ${{ vars.VITE_GOOGLE_OAUTH_CLIENT_ID }}
+          REPO_VITE_APPLE_OAUTH_CLIENT_ID: ${{ vars.VITE_APPLE_OAUTH_CLIENT_ID }}
+          REPO_VITE_GITHUB_OAUTH_CLIENT_ID: ${{ vars.VITE_GITHUB_OAUTH_CLIENT_ID }}
 
       - name: Copy index.html to 404.html for SPA routing
         run: cp dist/index.html dist/404.html
