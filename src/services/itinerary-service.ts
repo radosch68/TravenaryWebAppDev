@@ -73,7 +73,6 @@ export async function getItinerary(itineraryId: string): Promise<ItineraryDetail
   return apiRequest<ItineraryDetail>(`/itineraries/${itineraryId}`, {
     method: 'GET',
     protected: true,
-    skipAuthRefreshOn401: true,
   })
 }
 

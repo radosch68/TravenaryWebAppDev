@@ -28,6 +28,7 @@ import { formatLocalDate } from '@/utils/date-format'
 import { toDisplayLabel } from '@/utils/display-label'
 import { unsplashUrl } from '@/utils/unsplash-url'
 import { PencilSimple } from '@phosphor-icons/react'
+import { useAuthStore } from '@/store/auth-store'
 
 type PresentationMode = 'planning' | 'timeline'
 const PRESENTATION_MODE_STORAGE_KEY = 'itinerary-detail-presentation-mode'
@@ -44,6 +45,7 @@ export function ItineraryDetailPage(): ReactElement {
   const { itineraryId } = useParams<{ itineraryId: string }>()
   const navigate = useNavigate()
   const { t, i18n } = useTranslation(['common', 'errors'])
+  const clearSession = useAuthStore((authState) => authState.clearSession)
   const hasRestoredScrollRef = useRef(false)
   const [dashboardReturnUrl, setDashboardReturnUrl] = useState('/?page=1')
 
@@ -114,9 +116,15 @@ export function ItineraryDetailPage(): ReactElement {
         return
       }
 
+      if (error instanceof ApiError && error.status === 401) {
+        clearSession()
+        navigate('/signin', { replace: true })
+        return
+      }
+
       setState('error')
     }
-  }, [itineraryId])
+  }, [clearSession, itineraryId, navigate])
 
   useEffect(() => {
     void loadDetail()

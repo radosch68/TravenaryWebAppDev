@@ -34,11 +34,13 @@ import { isActivityAnchored } from '@/utils/activity-classification'
 import { sectionKey } from '@/utils/day-edit-transforms'
 import { PencilSimple } from '@phosphor-icons/react'
 import { useDayEditStore } from '@/store/day-edit-store'
+import { useAuthStore } from '@/store/auth-store'
 
 export function DayDetailPage(): ReactElement {
   const { itineraryId, dayNumber: dayNumberParam } = useParams<{ itineraryId: string; dayNumber: string }>()
   const navigate = useNavigate()
   const { t, i18n } = useTranslation(['common'])
+  const clearSession = useAuthStore((authState) => authState.clearSession)
 
   const [itinerary, setItinerary] = useState<ItineraryDetail | null>(null)
   const [state, setState] = useState<'loading' | 'ready' | 'error' | 'not-found' | 'day-not-found'>('loading')
@@ -115,9 +117,15 @@ export function DayDetailPage(): ReactElement {
         return
       }
 
+      if (error instanceof ApiError && error.status === 401) {
+        clearSession()
+        navigate('/signin', { replace: true })
+        return
+      }
+
       setState('error')
     }
-  }, [itineraryId, hasValidDayNumberParam, dayNum, loadDay])
+  }, [clearSession, dayNum, hasValidDayNumberParam, itineraryId, loadDay, navigate])
 
   useEffect(() => {
     const handle = window.setTimeout(() => {
