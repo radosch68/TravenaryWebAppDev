@@ -3442,10 +3442,16 @@ button:disabled {
   position: relative;
   border-radius: 6px;
   transition: background 0.12s ease;
+  cursor: pointer;
 }
 
 .activity-editor-row:hover {
   background: rgba(127, 85, 29, 0.04);
+}
+
+.activity-editor-row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .activity-editor-row--anchored {
@@ -3522,14 +3528,7 @@ button:disabled {
   align-items: start;
   column-gap: 0.4rem;
   min-width: 0;
-  cursor: pointer;
   padding-top: 0.15rem;
-}
-
-.activity-editor-row__header:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-  border-radius: 4px;
 }
 
 .activity-editor-row__title {
@@ -3544,7 +3543,6 @@ button:disabled {
   grid-column: 1 / span 2;
   grid-row: 2;
   min-width: 0;
-  cursor: pointer;
   padding-left: 0.35rem;
   padding-bottom: 0.15rem;
 }
@@ -3559,7 +3557,6 @@ button:disabled {
 .activity-editor-row__meta {
   grid-column: 1 / span 3;
   grid-row: 3;
-  cursor: pointer;
   min-width: 0;
   padding-left: 0.35rem;
 }

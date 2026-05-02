@@ -29,7 +29,7 @@ export function ActivityEditorRow({
 }: ActivityEditorRowProps): ReactElement {
   const { t, i18n } = useTranslation(['common'])
 
-  const handleEditKeyDown = (e: React.KeyboardEvent<HTMLDivElement>): void => {
+  const handleEditKeyDown = (e: React.KeyboardEvent<HTMLLIElement>): void => {
     if (e.key === 'Enter') {
       onEdit()
       return
@@ -61,10 +61,20 @@ export function ActivityEditorRow({
       ref={setNodeRef}
       style={style}
       className={`activity-editor-row${isAnchored ? ' activity-editor-row--anchored' : ''}${isDragging ? ' activity-editor-row--dragging' : ''}`}
+      role="button"
+      tabIndex={disabled ? -1 : 0}
+      aria-disabled={disabled}
+      onClick={() => {
+        if (!disabled) {
+          onEdit()
+        }
+      }}
+      onKeyDown={handleEditKeyDown}
     >
       <div className="activity-editor-row__left">
         <span
           className="activity-editor-row__drag-handle"
+          onClick={(event) => event.stopPropagation()}
           {...listeners}
           {...attributes}
         >
@@ -78,10 +88,6 @@ export function ActivityEditorRow({
 
       <div
         className="activity-editor-row__header"
-        role="button"
-        tabIndex={0}
-        onClick={onEdit}
-        onKeyDown={handleEditKeyDown}
       >
         <span className="activity-editor-row__title">{activity.title}</span>
         {activity.time && (
@@ -91,16 +97,13 @@ export function ActivityEditorRow({
         )}
       </div>
 
-      <div
-        className="activity-editor-row__description-wrap"
-        onClick={onEdit}
-      >
+      <div className="activity-editor-row__description-wrap">
         {activity.text ? (
           <span className="activity-editor-row__description">{activity.text}</span>
         ) : null}
       </div>
 
-      <div className="activity-editor-row__meta" onClick={onEdit}>
+      <div className="activity-editor-row__meta">
         <ActivityMetadataCompact activity={activity} referenceDisplayMode="thumbnails" />
       </div>
 
@@ -108,7 +111,10 @@ export function ActivityEditorRow({
         <button
           type="button"
           className="activity-editor-row__delete-btn"
-          onClick={onDelete}
+          onClick={(event) => {
+            event.stopPropagation()
+            onDelete()
+          }}
           disabled={disabled}
           aria-label={t('common:itinerary.dayEditor.deleteActivity')}
         >
