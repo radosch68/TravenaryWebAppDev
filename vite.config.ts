@@ -22,7 +22,25 @@ function addressPort(server: ViteDevServer): number | undefined {
   return undefined
 }
 
-function localNetworkUrlPlugin(preferredHost: string) {
+function formatBackendUrlForDisplay(configuredBaseUrl: string | undefined, preferredHost: string, protocol: string): string {
+  if (!configuredBaseUrl) {
+    return `${protocol}://${preferredHost}:3000`
+  }
+
+  try {
+    const configuredUrl = new URL(configuredBaseUrl)
+    if (configuredUrl.hostname === 'localhost' || configuredUrl.hostname === '127.0.0.1') {
+      configuredUrl.hostname = preferredHost
+      return configuredUrl.toString().replace(/\/$/, '')
+    }
+  } catch {
+    return configuredBaseUrl
+  }
+
+  return configuredBaseUrl.replace(/\/$/, '')
+}
+
+function localNetworkUrlPlugin(preferredHost: string, configuredBackendUrl: string | undefined) {
   return {
     name: 'travenary-local-network-url',
     configureServer(server: ViteDevServer): void {
@@ -34,7 +52,9 @@ function localNetworkUrlPlugin(preferredHost: string) {
         const port = addressPort(server) ?? server.config.server.port ?? 5173
         const protocol = server.config.server.https ? 'https' : 'http'
         const base = server.config.base ?? '/'
+        const backendUrl = formatBackendUrlForDisplay(configuredBackendUrl, preferredHost, protocol)
         server.config.logger.info(`  ➜  iPhone:  ${protocol}://${preferredHost}:${port}${base}`)
+        server.config.logger.info(`  ➜  Backend: ${backendUrl}`)
       }
     },
   }
@@ -52,7 +72,7 @@ export default defineConfig(({ command, mode }) => {
     base,
     plugins: [
       react(),
-      localNetworkUrlPlugin(localNetworkHost),
+      localNetworkUrlPlugin(localNetworkHost, env.VITE_API_BASE_URL),
     ],
     server: {
       host: true,
