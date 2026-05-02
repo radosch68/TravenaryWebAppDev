@@ -3,13 +3,12 @@ import type { ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useDraggable, useDroppable } from '@dnd-kit/core'
 
-import { AnchorSimple, Star } from '@phosphor-icons/react'
+import { AnchorSimple } from '@phosphor-icons/react'
 
 import type { ItineraryActivity, ItineraryDay } from '@/services/contracts'
 import { groupActivitiesForPlanning, isActivityAnchored } from '@/utils/activity-classification'
-import { formatLocalTimeRange } from '@/utils/date-format'
-import { ACTIVITY_TYPE_ICON, ACTIVITY_TYPE_COLOR } from './activity-presentation'
-import { ActivityMetadataCompact } from './ActivityMetadataCompact'
+import { ACTIVITY_TYPE_COLOR } from './activity-presentation'
+import { ActivityCardContent } from './ActivityCardContent'
 
 interface PlanningDaySectionProps {
   day: ItineraryDay
@@ -181,7 +180,6 @@ function PlanningActivityRow({
   activity,
   referenceDisplayMode = 'chips',
 }: PlanningActivityRowProps): ReactElement {
-  const { i18n } = useTranslation(['common'])
   const typeColor = ACTIVITY_TYPE_COLOR[activity.type] ?? ACTIVITY_TYPE_COLOR.note
   const anchored = isActivityAnchored(activity)
 
@@ -193,23 +191,10 @@ function PlanningActivityRow({
         border: `1px solid ${typeColor.icon}1A`,
       }}
     >
-      <span className="planning-activity__left">
-        <span className="planning-activity__type-icon" style={{ color: typeColor.icon }}>
-          {ACTIVITY_TYPE_ICON[activity.type] ?? <Star size={16} />}
-        </span>
-      </span>
-      <span className="planning-activity__title">{activity.title}</span>
-      {activity.time ? (
-        <span className="planning-activity__time">
-          {formatLocalTimeRange(activity.time, activity.timeEnd, i18n.language)}
-        </span>
-      ) : null}
-      {activity.text ? (
-        <span className="planning-activity__desc">{activity.text}</span>
-      ) : null}
-      <ActivityMetadataCompact
+      <ActivityCardContent
         activity={activity}
-        className="planning-activity__meta"
+        headerLayout="inline"
+        className="planning-activity__content"
         referenceDisplayMode={referenceDisplayMode}
       />
     </li>

@@ -1,12 +1,11 @@
 import type { ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useDraggable } from '@dnd-kit/core'
-import { Star, Trash } from '@phosphor-icons/react'
+import { Trash } from '@phosphor-icons/react'
 
 import type { ItineraryActivity } from '@/services/contracts'
-import { formatLocalTimeRange } from '@/utils/date-format'
-import { ACTIVITY_TYPE_COLOR, ACTIVITY_TYPE_ICON } from './activity-presentation'
-import { ActivityMetadataCompact } from './ActivityMetadataCompact'
+import { ACTIVITY_TYPE_COLOR } from './activity-presentation'
+import { ActivityCardContent } from './ActivityCardContent'
 
 interface ActivityEditorRowProps {
   activity: ItineraryActivity
@@ -27,7 +26,7 @@ export function ActivityEditorRow({
   disabled,
   dragDisabled,
 }: ActivityEditorRowProps): ReactElement {
-  const { t, i18n } = useTranslation(['common'])
+  const { t } = useTranslation(['common'])
 
   const handleEditKeyDown = (e: React.KeyboardEvent<HTMLLIElement>): void => {
     if (e.key === 'Enter') {
@@ -71,56 +70,34 @@ export function ActivityEditorRow({
       }}
       onKeyDown={handleEditKeyDown}
     >
-      <div className="activity-editor-row__left">
-        <span
-          className="activity-editor-row__drag-handle"
-          onClick={(event) => event.stopPropagation()}
-          {...listeners}
-          {...attributes}
-        >
-          <GripIcon />
-        </span>
-        {/* anchored marker removed from activity pill; block-level triangle indicates anchoring */}
-        <span className="activity-editor-row__type-icon" aria-label={activity.type} style={{ color: typeColor.icon }}>
-          {ACTIVITY_TYPE_ICON[activity.type] ?? <Star size={18} />}
-        </span>
-      </div>
-
-      <div
-        className="activity-editor-row__header"
-      >
-        <span className="activity-editor-row__title">{activity.title}</span>
-        {activity.time && (
-          <span className="activity-editor-row__time">
-            {formatLocalTimeRange(activity.time, activity.timeEnd, i18n.language)}
+      <ActivityCardContent
+        activity={activity}
+        referenceDisplayMode="thumbnails"
+        headerLeading={(
+          <span
+            className="activity-editor-row__drag-handle"
+            onClick={(event) => event.stopPropagation()}
+            {...listeners}
+            {...attributes}
+          >
+            <GripIcon />
           </span>
         )}
-      </div>
-
-      <div className="activity-editor-row__description-wrap">
-        {activity.text ? (
-          <span className="activity-editor-row__description">{activity.text}</span>
-        ) : null}
-      </div>
-
-      <div className="activity-editor-row__meta">
-        <ActivityMetadataCompact activity={activity} referenceDisplayMode="thumbnails" />
-      </div>
-
-      <div className="activity-editor-row__right">
-        <button
-          type="button"
-          className="activity-editor-row__delete-btn"
-          onClick={(event) => {
-            event.stopPropagation()
-            onDelete()
-          }}
-          disabled={disabled}
-          aria-label={t('common:itinerary.dayEditor.deleteActivity')}
-        >
-          <Trash size={16} />
-        </button>
-      </div>
+        headerAction={(
+          <button
+            type="button"
+            className="activity-editor-row__delete-btn"
+            onClick={(event) => {
+              event.stopPropagation()
+              onDelete()
+            }}
+            disabled={disabled}
+            aria-label={t('common:itinerary.dayEditor.deleteActivity')}
+          >
+            <Trash size={16} />
+          </button>
+        )}
+      />
     </li>
   )
 }
