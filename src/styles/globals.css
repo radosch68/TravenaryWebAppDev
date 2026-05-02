@@ -3534,16 +3534,19 @@ button:disabled {
 .activity-editor-row__title {
   font-size: 0.88rem;
   font-weight: 600;
+  line-height: 1.25;
+  min-height: calc(2 * 1.25em);
   white-space: normal;
   overflow-wrap: anywhere;
   min-width: 0;
 }
 
 .activity-editor-row__description-wrap {
-  grid-column: 1 / span 2;
+  grid-column: 1 / span 3;
   grid-row: 2;
   min-width: 0;
   padding-left: 0.35rem;
+  padding-right: 0.35rem;
   padding-bottom: 0.15rem;
 }
 
@@ -3559,17 +3562,18 @@ button:disabled {
   grid-row: 3;
   min-width: 0;
   padding-left: 0.35rem;
+  padding-right: 0.35rem;
 }
 
 .activity-editor-row__right {
-  grid-column: 3;
-  grid-row: 2;
+  position: absolute;
+  top: calc(0.3rem + 14px + 0.5rem);
+  right: 0.35rem;
   display: flex;
-  align-items: flex-end;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: flex-start;
   gap: 0.2rem;
   flex-shrink: 0;
-  padding-bottom: 0.15rem;
 }
 
 .activity-editor-row__time {
