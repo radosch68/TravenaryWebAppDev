@@ -2636,7 +2636,7 @@ button:disabled {
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: 0.8rem;
 }
 
 .planning-section--anchored {
@@ -3279,7 +3279,7 @@ button:disabled {
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--text-muted);
-  margin-bottom: 0.25rem;
+  min-height: 18px;
 }
 
 .day-block-editor__label-text {
@@ -3337,20 +3337,29 @@ button:disabled {
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
+  gap: 0;
 }
 
 /* ---- Activity drop slots ---- */
 
 .activity-drop-slot {
-  height: 2px;
+  height: 0.8rem;
   border-radius: 1px;
   transition: height 0.12s, background 0.12s;
 }
 
+.day-block-editor__list > .activity-drop-slot:first-child {
+  height: 0.4rem;
+}
+
 .activity-drop-slot--active {
-  height: 4px;
-  background: var(--accent);
+  background: linear-gradient(
+    to bottom,
+    transparent calc(50% - 2px),
+    var(--accent) calc(50% - 2px),
+    var(--accent) calc(50% + 2px),
+    transparent calc(50% + 2px)
+  );
 }
 
 /* ---- Activity editor row ---- */
