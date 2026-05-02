@@ -3571,6 +3571,42 @@ button:disabled {
   color: var(--text-muted);
 }
 
+.activity-accommodation-details {
+  border: 1px solid rgba(127, 85, 29, 0.16);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.46);
+}
+
+.activity-accommodation-details__summary {
+  cursor: pointer;
+  padding: 0.32rem 0.45rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  user-select: none;
+}
+
+.activity-accommodation-details__grid {
+  display: grid;
+  grid-template-columns: minmax(7.5rem, max-content) minmax(0, 1fr);
+  gap: 0.26rem 0.7rem;
+  margin: 0;
+  padding: 0 0.45rem 0.42rem;
+}
+
+.activity-accommodation-details__row {
+  display: contents;
+}
+
+.activity-accommodation-details dt {
+  color: var(--text-muted);
+}
+
+.activity-accommodation-details dd {
+  margin: 0;
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+
 .activity-card-content__meta {
   overflow-x: hidden;
 }

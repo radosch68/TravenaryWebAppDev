@@ -84,15 +84,15 @@ export function ActivityCardContent({
         )}
       </header>
 
-      {activity.text ? (
-        <section className="activity-card-content__description">
-          {activity.text}
-        </section>
-      ) : null}
-
       {typeDetails ? (
         <section className="activity-card-content__type-details">
           {typeDetails}
+        </section>
+      ) : null}
+
+      {activity.text ? (
+        <section className="activity-card-content__description">
+          {activity.text}
         </section>
       ) : null}
 
