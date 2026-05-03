@@ -3569,20 +3569,72 @@ button:disabled {
 .activity-card-content__type-details {
   font-size: 0.78rem;
   color: var(--text-muted);
+  padding: 0;
+  margin: -0.35rem -0.2rem 0;
+}
+
+.planning-activity .activity-card-content__type-details,
+.timeline-activity .activity-card-content__type-details {
+  margin-inline: -0.5rem;
 }
 
 .activity-accommodation-details {
-  border: 1px solid rgba(127, 85, 29, 0.16);
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.46);
+  border-bottom: 1px solid rgba(127, 85, 29, 0.16);
 }
 
 .activity-accommodation-details__summary {
+  display: flex;
+  align-items: center;
+  column-gap: 0.55rem;
+  row-gap: 0.26rem;
+  flex-wrap: wrap;
   cursor: pointer;
-  padding: 0.32rem 0.45rem;
-  font-weight: 700;
+  padding: 0.34rem 0.5rem;
+  font-size: 0.82rem;
+  font-weight: 400;
+  line-height: 1.35;
   color: var(--text-secondary);
   user-select: none;
+  list-style: none;
+}
+
+.activity-accommodation-details__summary::-webkit-details-marker {
+  display: none;
+}
+
+.activity-accommodation-details__summary::before {
+  content: '';
+  flex: 0 0 auto;
+  width: 0;
+  height: 0;
+  margin-left: -0.18rem;
+  border-top: 0.28rem solid transparent;
+  border-bottom: 0.28rem solid transparent;
+  border-left: 0.42rem solid currentColor;
+  transition: transform 0.12s ease;
+}
+
+.activity-accommodation-details[open] .activity-accommodation-details__summary::before {
+  transform: rotate(90deg);
+}
+
+.activity-accommodation-details__summary-item {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.activity-accommodation-details__summary-item:nth-child(3) {
+  flex: 1 1 auto;
+  text-align: center;
+}
+
+.activity-accommodation-details__summary-item:nth-child(4) {
+  margin-left: auto;
+  text-align: right;
+}
+
+.activity-accommodation-details__summary-item strong {
+  font-weight: 700;
 }
 
 .activity-accommodation-details__grid {
@@ -3590,7 +3642,7 @@ button:disabled {
   grid-template-columns: minmax(7.5rem, max-content) minmax(0, 1fr);
   gap: 0.26rem 0.7rem;
   margin: 0;
-  padding: 0 0.45rem 0.42rem;
+  padding: 0 0.5rem 0.42rem;
 }
 
 .activity-accommodation-details__row {
