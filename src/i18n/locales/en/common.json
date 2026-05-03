@@ -293,7 +293,10 @@
       "confirmAnchoredMoveWithDates": "You are moving an activity anchored to {{sourceDate}}.\nContinue with move to anchor it to {{targetDate}}?",
       "confirmAnchoredMoveTitle": "Move anchored activity",
       "confirmAnchoredMoveAccept": "Move",
-      "confirmAnchoredMoveCancel": "Cancel"
+      "confirmAnchoredMoveCancel": "Cancel",
+      "overnightMissing": "No accommodation",
+      "overnightMultiple": "Multiple accommodations",
+      "overnightScrollToAccommodation": "Scroll to accommodation: {{title}}"
     },
     "activityMeta": {
       "references": "Photos, videos, links",

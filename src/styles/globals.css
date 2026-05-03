@@ -1940,15 +1940,89 @@ button:disabled {
 .itinerary-day-insert-slot {
   list-style: none;
   margin: 0;
-  padding: 0.2rem var(--itinerary-day-item-pad-inline-right) 0.2rem var(--itinerary-day-item-pad-inline-left);
+  padding: 0.2rem calc(0.5rem + var(--itinerary-day-item-pad-inline-right, 0.8rem)) 0.2rem calc(0.5rem + var(--itinerary-day-item-pad-inline-left, 0.8rem));
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
+.itinerary-day-insert-slot--overnight {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.5rem;
+}
+
 .itinerary-day-insert-button {
   width: 2rem;
   height: 2rem;
+  flex: 0 0 auto;
+}
+
+.overnight-coverage {
+  min-width: 0;
+  width: fit-content;
+  max-width: 100%;
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 1px solid transparent;
+  border-left-width: 4px;
+  border-right-width: 4px;
+  border-radius: 6px;
+  padding: 0.42rem 0.65rem;
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 700;
+  text-align: left;
+}
+
+.overnight-coverage--clickable {
+  cursor: pointer;
+}
+
+.overnight-coverage--clickable:hover {
+  filter: saturate(1.05) brightness(0.98);
+}
+
+.overnight-coverage--clickable:focus-visible {
+  outline: 2px solid rgba(13, 124, 102, 0.55);
+  outline-offset: 2px;
+}
+
+.overnight-coverage--covered {
+  border-color: rgba(13, 124, 102, 0.28);
+  border-left-color: #0d7c66;
+  border-right-color: #0d7c66;
+  background: rgba(13, 124, 102, 0.09);
+  color: #0a5f4d;
+}
+
+.overnight-coverage--missing {
+  border-color: rgba(187, 111, 22, 0.3);
+  border-left-color: #c96f14;
+  border-right-color: #c96f14;
+  background: rgba(201, 111, 20, 0.1);
+  color: #7a470f;
+}
+
+.overnight-coverage--multiple {
+  border-color: rgba(180, 50, 50, 0.28);
+  border-left-color: #b43232;
+  border-right-color: #b43232;
+  background: rgba(180, 50, 50, 0.1);
+  color: #7f2424;
+}
+
+.overnight-coverage__icon {
+  flex: 0 0 auto;
+}
+
+.overnight-coverage__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .itinerary-day-list__item p {
@@ -2732,6 +2806,7 @@ button:disabled {
   font-size: 0.88rem;
   border-radius: 6px;
   min-width: 0;
+  scroll-margin-block: 40vh;
 }
 
 

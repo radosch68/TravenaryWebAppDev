@@ -185,6 +185,7 @@ function PlanningActivityRow({
 
   return (
     <li
+      id={`planning-activity-${activity.id}`}
       className={`planning-activity${anchored ? ' planning-activity--anchored' : ''}`}
       style={{
         background: typeColor.bg,
